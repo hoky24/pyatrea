@@ -181,12 +181,22 @@ class Atrea:
         data["category"] = ""
         data["model"] = ""
 
+        # findChild() returns None when the id is absent from configDir (a
+        # firmware/config mismatch), so guard each lookup instead of blindly
+        # dereferencing .attrib. Return whatever was resolved rather than crash.
         main = self.findChild(configDir, status["H10520"])
-        data["main"] = main.attrib["name"]
-        category = self.findChild(main, status["H10521"])
-        data["category"] = category.attrib["name"]
-        model = self.findChild(category, status["H10522"])
-        data["model"] = model.attrib["name"]
+        if main is None:
+            return False
+        data["main"] = main.attrib.get("name", "")
+
+        if "H10521" in status:
+            category = self.findChild(main, status["H10521"])
+            if category is not None:
+                data["category"] = category.attrib.get("name", "")
+                if "H10522" in status:
+                    model = self.findChild(category, status["H10522"])
+                    if model is not None:
+                        data["model"] = model.attrib.get("name", "")
         return data
 
     def getID(self):
@@ -264,15 +274,28 @@ class Atrea:
                     ):
                         return False
                 if response.status_code == 200:
-                    self.status = {}
-                    xmldoc = ET.fromstring(response.content)
-                    parentData = xmldoc[
-                        0
-                    ]  # Known paths to data nodes: /RD5WEB/RD5/ and /PCOWEB/PCO/
-                    for data in list(parentData):
-                        for child in list(data):
-                            if child.tag == "O":
-                                self.status[child.attrib["I"]] = child.attrib["V"]
+                    # A 200 can still carry a malformed/empty body (boot,
+                    # captive portal, proxy error page). Parse into a local
+                    # dict and only commit it on success, so a parse failure
+                    # keeps the last-good status instead of crashing the caller
+                    # or wiping the cache to {}.
+                    try:
+                        xmldoc = ET.fromstring(response.content)
+                        parentData = xmldoc[
+                            0
+                        ]  # Known data nodes: /RD5WEB/RD5/ and /PCOWEB/PCO/
+                        parsed = {}
+                        for data in list(parentData):
+                            for child in list(data):
+                                if (
+                                    child.tag == "O"
+                                    and "I" in child.attrib
+                                    and "V" in child.attrib
+                                ):
+                                    parsed[child.attrib["I"]] = child.attrib["V"]
+                        self.status = parsed
+                    except (ET.ParseError, IndexError):
+                        pass
         return self.status
 
     def getTranslation(self, id):
@@ -385,9 +408,16 @@ class Atrea:
     def getMode(self):
         status = self.getStatus()
         if "H10705" in status:
-            return AtreaMode(self.getValue("H10705"))
+            try:
+                return AtreaMode(self.getValue("H10705"))
+            except ValueError:
+                # Value outside the AtreaMode enum (unexpected firmware value).
+                return None
         elif "H01000" in status:
-            return self.idsToModes[self.getValue("H01000")]
+            # idsToModes is populated by loadSupportedModes(); the reported id
+            # may not be present (modes not loaded yet, or unknown id).
+            return self.idsToModes.get(self.getValue("H01000"))
+        return None
 
     def loadSupportedForcedModes(self):
         self.forcedModes = {}
