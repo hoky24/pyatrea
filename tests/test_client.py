@@ -89,7 +89,7 @@ def test_id_of_returns_none_when_incomplete():
     assert AtreaClient.id_of(AtreaStatus(registers={})) is None
 
 
-async def test_commit_sends_register_payload(client):
+async def test_commit_url_has_auth_before_register_writes(client):
     sent = {}
 
     def cb(url, **kwargs):
@@ -102,9 +102,13 @@ async def test_commit_sends_register_payload(client):
             known_registers={"H10708", "H01020"},
         )
         builder.set_power(40)
-        ok = await client.commit(builder)
-        assert ok is True
-        assert "H1070800040" in sent["url"]
+        assert await client.commit(builder) is True
+        url = sent["url"]
+        assert "auth=" in url
+        # register writes must come AFTER the auth query param and after '?'
+        assert "?" in url
+        assert url.index("?") < url.index("H1070800040")
+        assert url.index("auth=") < url.index("H1070800040")
 
 
 async def test_commit_empty_builder_is_noop(client):

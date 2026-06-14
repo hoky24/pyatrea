@@ -21,6 +21,29 @@ def _patched_client_response_init(self, *args, **kwargs):  # type: ignore[no-unt
 
 _client_reqrep.ClientResponse.__init__ = _patched_client_response_init  # type: ignore[method-assign]
 
+# Compatibility shim: aioresponses 0.7.8 normalizes URLs with
+# parse_qsl(keep_blank_values=False), which silently drops valueless query
+# tokens (e.g. the Atrea write payload `?auth=CODE&H1070800040`). That makes
+# the request callback observe a URL stripped of the register writes. Preserve
+# blank values so tests can assert on the real, fully-formed request URL.
+from urllib.parse import parse_qsl, urlencode  # noqa: E402
+
+from aioresponses import core as _ar_core  # noqa: E402
+from yarl import URL as _URL  # noqa: E402
+
+
+def _normalize_url_keep_blank(url):  # type: ignore[no-untyped-def]
+    # Unlike the upstream helper we do NOT sort the query params: tests assert
+    # on write-path ordering (auth before register writes). All matchers in the
+    # suite are regex-based, so ordering does not affect request matching.
+    url = _URL(url)
+    return url.with_query(
+        urlencode(parse_qsl(url.query_string, keep_blank_values=True))
+    )
+
+
+_ar_core.normalize_url = _normalize_url_keep_blank  # type: ignore[attr-defined]
+
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
 
 
