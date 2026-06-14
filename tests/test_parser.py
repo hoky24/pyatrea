@@ -75,3 +75,34 @@ def test_value_applies_offset_then_coef():
 
 def test_value_missing_key_returns_none():
     assert AtreaStatus().value("nope") is None
+
+
+def test_user_labels_parity():
+    content = load("texts.xml")
+    xmldoc = ET.fromstring(content)
+    legacy = {}
+    node = xmldoc.find("texts")
+    if node is not None:
+        for t in node:
+            legacy[t.attrib["id"]] = t.attrib["value"]
+    from pyatrea.parser import parse_user_labels
+    assert parse_user_labels(content) == legacy
+
+
+def test_config_dir_returns_element():
+    from pyatrea.parser import parse_config_dir
+    el = parse_config_dir(load("cfgdir.xml"))
+    assert el is not None
+
+
+def test_find_child_returns_none_when_absent():
+    from pyatrea.parser import parse_config_dir, find_child
+    el = parse_config_dir(load("cfgdir.xml"))
+    assert find_child(el, "this-id-does-not-exist-99999") is None
+
+
+def test_translations_parser_smoke():
+    from pyatrea.parser import parse_translations
+    result = parse_translations(load("texts_2.xml"))
+    assert set(result.keys()) == {"params", "words"}
+    assert isinstance(result["params"], dict)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from xml.etree import ElementTree as ET
+import demjson3  # type: ignore[import-untyped]
 from .exceptions import AtreaResponseError
 from .models import AtreaParams, AtreaStatus
 
@@ -39,3 +40,71 @@ def parse_params(content: bytes) -> AtreaParams:
                 if "offset" in child.attrib:
                     params.offsets[cid] = float(child.attrib["offset"])
     return params
+
+
+def decompress(s: str) -> str:
+    # Ported verbatim from the original pyatrea implementation.
+    data = list(s)
+    out = [data[0]]
+    code = 512
+    cache: dict[int, str] = {}
+    old = curr = data[0]
+    for char in data[1:]:
+        cc = ord(char)
+        if cc < 512:
+            phrase = char
+        elif cc in cache:
+            phrase = cache[cc]
+        else:
+            phrase = old + curr
+        out.append(phrase)
+        curr = phrase[0]
+        cache[code] = old + curr
+        code += 1
+        old = phrase
+    return "".join(out)
+
+
+def find_child(element: "ET.Element | None", id: str) -> "ET.Element | None":
+    if element is None:
+        return None
+    for child in element:
+        if "id" in child.attrib and child.attrib["id"].lstrip("0") == id:
+            return child
+    return None
+
+
+def parse_config_dir(content: bytes) -> "ET.Element":
+    try:
+        return ET.fromstring(content)
+    except ET.ParseError as err:
+        raise AtreaResponseError("malformed cfgdir XML") from err
+
+
+def parse_user_labels(content: bytes) -> dict[str, str]:
+    labels: dict[str, str] = {}
+    try:
+        xmldoc = ET.fromstring(content)
+    except ET.ParseError as err:
+        raise AtreaResponseError("malformed texts XML") from err
+    node = xmldoc.find("texts")
+    if node is not None:
+        for text in node:
+            labels[text.attrib["id"]] = text.attrib["value"]
+    return labels
+
+
+def parse_translations(content: bytes) -> dict[str, dict]:
+    result: dict[str, dict] = {"params": {}, "words": {}}
+    try:
+        xmldoc = ET.fromstring(content)
+    except ET.ParseError as err:
+        raise AtreaResponseError("malformed translations XML") from err
+    nodes = [ET.fromstring(decompress(xmldoc.text or ""))] \
+        if xmldoc.tag == "compress" else xmldoc.findall("texts")
+    for node in nodes:
+        for param in node.findall("params"):
+            result["params"].update(demjson3.decode(param.text))
+        for word in node.findall("words"):
+            result["words"].update(demjson3.decode(word.text))
+    return result
