@@ -163,6 +163,13 @@ class Atrea:
         if not configDir:
             return False
 
+        # Guard against empty/partial status: exec() now invalidates the cache,
+        # so the next read refetches over HTTP and can return {} on a transient
+        # network failure (e.g. a blip right after a write). Without this the
+        # status["H10520"] subscripts below raise KeyError and abort the update.
+        if "H10520" not in status:
+            return False
+
         data = {}
         data["main"] = ""
         data["category"] = ""
@@ -187,6 +194,10 @@ class Atrea:
 
     def getVersion(self):
         status = self.getStatus()
+        # Guard against empty/partial status (see getModel): avoids KeyError
+        # when a post-exec() cache invalidation is followed by a failed refetch.
+        if "I00022" not in status or "I00020" not in status or "I00021" not in status:
+            return None
         if int(status["I00022"]) > 0:
             return status["I00020"] + "." + status["I00021"] + "." + status["I00022"]
         return status["I00020"] + "." + status["I00021"]
