@@ -529,6 +529,7 @@ class Atrea:
                 return False
             else:
                 self.code = xmldoc.text
+                return True
         return False
 
     def setPower(self, power):
