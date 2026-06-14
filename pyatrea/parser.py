@@ -169,3 +169,23 @@ def parse_supported_modes(
             if option.attrib.get("rw", "1") == "1":
                 writable[mode] = True
     return writable, ids_to_modes
+
+
+def supported_modes_from_status(
+    status: AtreaStatus,
+) -> dict[AtreaMode, bool] | None:
+    """Derive writable modes from the I12004 bitmask (RD5 firmware). Returns
+    None when the bitmask registers are absent, so the caller can fall back to
+    the userctrl ModeEC parser (parse_supported_modes)."""
+    regs = status.registers
+    if "I12004" not in regs or "H11700" not in regs:
+        return None
+    binary = "{0:08b}".format(int(regs["I12004"]))
+    h11700 = int(regs["H11700"])
+    writable: dict[AtreaMode, bool] = {m: False for m in AtreaMode}
+    for i in range(8):
+        if (i == 3 or i == 4) and h11700 == 0:
+            writable[AtreaMode(i)] = False
+        else:
+            writable[AtreaMode(i)] = int(binary[7 - i]) != 0
+    return writable

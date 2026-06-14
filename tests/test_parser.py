@@ -121,3 +121,31 @@ def test_supported_modes_parser_returns_writable_map():
     modes, ids_to_modes = parse_supported_modes(load("userctrl.xml"))
     assert isinstance(modes, dict)
     assert isinstance(ids_to_modes, dict)
+
+
+def test_supported_modes_from_status_bitmask_parity():
+    """RD5 unit derives supported modes from the I12004 bitmask, not userctrl."""
+    from pyatrea.parser import parse_status, supported_modes_from_status
+    from pyatrea.const import AtreaMode
+    status = parse_status(load("status.xml"))
+    result = supported_modes_from_status(status)
+    assert result is not None  # this fixture HAS I12004 + H11700
+
+    # legacy reference computation
+    binary = "{0:08b}".format(int(status.registers["I12004"]))
+    h11700 = int(status.registers["H11700"])
+    expected = {}
+    for i in range(8):
+        if (i == 3 or i == 4) and h11700 == 0:
+            expected[AtreaMode(i)] = False
+        else:
+            expected[AtreaMode(i)] = int(binary[7 - i]) != 0
+    # result must agree with legacy for the first 8 modes
+    for i in range(8):
+        assert result[AtreaMode(i)] == expected[AtreaMode(i)]
+
+
+def test_supported_modes_from_status_returns_none_without_registers():
+    from pyatrea.parser import supported_modes_from_status
+    from pyatrea.models import AtreaStatus
+    assert supported_modes_from_status(AtreaStatus(registers={})) is None
