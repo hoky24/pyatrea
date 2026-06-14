@@ -1,0 +1,592 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root><layout>
+	<options><!--
+definice hodnot pro volbu:
+S vyjimkou rozsahu definovaneho minimem, maximem a krokem jsou odesilany klice hodnot, nikoli samotne zobrazovane hodnoty.
+ 1. Plná definice
+    <i id="0" title="Vypnuto"/>
+    <i id="1" title="Zapnuto"/>
+    id - klic
+    title - zobrazovana hodnota
+ 2. Zkracena definice s klicem 0,1,2,...,n 
+    <values><![CDATA[[0,10,15,20,30,40,50,70,100,150,200,250,300,450,500,600]]]></values>
+    hodnota s klicem 2 je 15
+ 3. Zkracena definice vcetne klicu
+    <values><![CDATA[{5:0,6:10}]]></values>
+    hodnota s klicem 5 je 0
+    hodnota s klicem 6 je 10
+    nebo <values><![CDATA[{5:'hodnota A',6:'hodnota B'}]]></values>  - zatim nedokonceno, bude treba???
+!!! U ZKRACENYCH DEFINIC POZOR NA TYP ZAVOREK - RUZNE S KLICEM A BEZ KLICE !!!-->
+
+		<op id="AutoManTempBox" type="boxes">
+			<i id="0" title="$manual"/>
+			<i id="1" title="$automatic"/>
+			<i id="2" title="$temporary" rw="0"/>
+		</op>
+<!--		<op id="Power" type="range" minval="12" maxval="100" step=".5" unit="%" title="$power" from="12" to="100">
+			<i id="0" val="0" title="$off"/>
+		</op>-->
+
+		<op id="Power_0" type="range" minval="12" maxval="100" step="1" unit="%" title="$power" from="12" to="100">
+			<i id="0" val="0" title="$off"/>
+		</op>
+		<op id="Power_1" type="range" minval="1600" maxval="8000" step="0" title="$power" from="1" to="100">
+			<unit><![CDATA[ m<sup>3</sup>/h]]></unit>
+			<i id="0" val="0" title="$off"/>
+		</op>
+		<op id="Power_2" type="boxes" minval="1" title="$power">
+			<i id="0" val="0" title="$off" rw="0"  color="#666"/>
+			<i id="1" val="1" title="$night" color="#008"/>
+			<i id="2" val="2" title="$day" color="#6ff"/>
+		</op>
+		<op id="Power_3" type="range" minval="12" maxval="100" step="1" unit="%" title="$power" from="12" to="100">
+			<i id="0" val="0" title="0" rw="0"  color="#666"/>
+		</op>
+		<op id="Power_4" type="boxes" minval="0" title="$power">
+			<i id="0" val="0" title="Off" rw="0"  color="#666"/>
+			<i id="1" val="1" title="Min/Min" color="#001"/>
+			<i id="2" val="2" title="Min/Norm" color="#010"/>
+			<i id="3" val="3" title="Min/Max" color="#020"/>
+			<i id="4" val="4" title="Norm/Min" color="#030"/>
+      <i id="5" val="5" title="Norm/Norm" color="#040"/>
+      <i id="6" val="6" title="Norm/Max" color="#050"/>     
+			<i id="7" val="7" title="Max/Min" color="#060"/>
+      <i id="8" val="8" title="Max/Norm" color="#070"/>
+      <i id="9" val="9" title="Max/Max" color="#080"/>     
+ 		</op>
+		<op id="Power_5" type="boxes" minval="1" title="$power">
+			<i id="0" val="0" title="Off" rw="0"  color="#666"/>
+			<i id="1" val="1" title="Min" color="#008"/>
+			<i id="2" val="2" title="Norm" color="#6ff"/>
+			<i id="3" val="3" title="Max" color="#6ff"/>
+ 		</op>
+    
+		<op id="Power_2Z" type="boxes" title="$power">
+		   <onshow><![CDATA[ function(m2Z, curVal) {
+				if(typeof(m2Z)!='number') m2Z=mode2Z();
+				this.valuesRW=[[0],[0,10,11,12],[0,20,21,22],[0,30,31,32,33,34,35,36,37,38]][m2Z];
+				for(var i in this.values) this.values[i].rw=(this.valuesRW.indexOf(Number(i))==-1?'0':'1');
+				if((curVal)) return (this.valuesRW.indexOf(curVal)>-1);
+				return true;
+				}]]></onshow>
+			<i id="0" title="Off" color="#666" rw="0"/>
+
+			<i id="10" title="Min-Vent" color="#3cf"/>
+			<i id="11" title="Norm-Vent" color="#38f"/>
+			<i id="12" title="Max-Vent" color="#34f"/>
+
+			<i id="20" title="Min-Circ" color="#fc0"/>
+			<i id="21" title="Norm-Circ" color="#f80"/>
+			<i id="22" title="Max-Circ" color="#f40"/>
+
+			<i id="30" title="Min/Min" color="#270"/>
+			<i id="31" title="Min/Norm" color="#287"/>
+			<i id="32" title="Min/Max" color="#29e"/>
+			<i id="33" title="Norm/Min" color="#7a0"/>
+			<i id="34" title="Norm/Norm" color="#7b7"/>
+			<i id="35" title="Norm/Max" color="#7cd"/>
+			<i id="36" title="Max/Min" color="#cd0"/>
+			<i id="37" title="Max/Norm" color="#ce7"/>
+			<i id="38" title="Max/Max" color="#cfd"/>
+ 		</op>
+		
+		<op id="Power" type="range" unit="%" title="$power">
+			<values><![CDATA[[0,10,20,30,40,50,60,70,80,90,100]]]></values>
+		</op>
+		<op id="Temp100" type="range" minval="10" maxval="35" step=".1" stepset="5" dec="1" unit="°C" title="$temperature" from="100" to="300"/>
+
+		<op id="Temp" type="range" minval="100" maxval="35" step=".5" unit="°C" coef="10" title="$temperature">
+			<i id="0" val="14.5" title="$off"/>
+		</op>
+
+		<op id="TempInput" type="range" minval="14.5" maxval="35" step=".5" coef="10" unit="°C" title="$temperature"/>
+    
+<!--		<op id="ModeRD" type="boxes" title="$mode">-->
+<!--
+Vypnuto
+Automat
+Větrání 
+Větrání + cirkulace
+Cirkulace
+Noční předchlazení
+Rozvážení
+Přetlak
+			<i id="0" title="$eqVent" color="#dab"/>
+			<i id="20" title="$startUp" color="#cab" rw="0"/>
+			<i id="21" title="$runDown" color="#cab" rw="0"/>
+			<i id="23" title="$external" color="#cab" rw="0"/>
+		    <i id="26" title="$emergMode" color="#cab" rw="0"/>               
+-->
+		<op id="Mode" type="boxes" title="$mode">
+			<i id="0" title="$off" color="#999"/>
+			<i id="1" title="$modeAuto" color="#06f"/>
+			<i id="2" title="$ventilation" color="#3c3"/>
+			<i id="3" title="$ventCirc" color="#cc3"/>
+			<i id="4" title="$circulation" color="#f90"/>
+			<i id="5" title="$nightBefCool" color="#0fc"/>
+			<i id="6" title="$disbalance" color="#93f"/>
+			<i id="7" title="$overPrVent" color="#c00"/>
+		</op>
+		<op id="ModeText" type="boxes" title="$mode">
+			<i id="0" title="$off" color="#dab"/>
+			<i id="1" title="$startUp" color="#dab"/>
+			<i id="2" title="$runDown" color="#66b"/>
+			<i id="3" title="D1" color="#66b">
+			   <ondisplay><![CDATA[ function() {this.title=values['D1'];}]]></ondisplay></i>
+			<i id="4" title="D2" color="#666">
+			   <ondisplay><![CDATA[ function() {this.title=values['D2'];}]]></ondisplay></i>
+			<i id="5" title="D3" color="#cab">
+			   <ondisplay><![CDATA[ function() {this.title=values['D3'];}]]></ondisplay></i>
+			<i id="6" title="D4" color="#cab">
+			   <ondisplay><![CDATA[ function() {this.title=values['D4'];}]]></ondisplay></i>
+			<i id="7" title="IN1" color="#cab">
+			   <ondisplay><![CDATA[ function() {this.title=values['IN1'];}]]></ondisplay></i>
+			<i id="8" title="IN2" color="#cab">
+			   <ondisplay><![CDATA[ function() {this.title=values['IN2'];}]]></ondisplay></i>
+			<i id="9" title="INk1_1" color="#cab">
+			   <ondisplay><![CDATA[ function() {this.title=values['INK1_1'];}]]></ondisplay></i>
+			<i id="10" title="INk1_2" color="#cab">
+			   <ondisplay><![CDATA[ function() {this.title=values['INK1_2'];}]]></ondisplay></i>
+			<i id="11" title="INk1_3" color="#cab">
+			   <ondisplay><![CDATA[ function() {this.title=values['INK1_3'];}]]></ondisplay></i>
+			<i id="12" title="INk1_4" color="#cab">
+			   <ondisplay><![CDATA[ function() {this.title=values['INK1_4'];}]]></ondisplay></i>
+			<i id="13" title="INk2_1" color="#cab">
+			   <ondisplay><![CDATA[ function() {this.title=values['INK2_1'];}]]></ondisplay></i>
+			<i id="14" title="INk2_2" color="#cab">
+			   <ondisplay><![CDATA[ function() {this.title=values['INK2_2'];}]]></ondisplay></i>
+			<i id="15" title="INk2_3" color="#cab">
+			   <ondisplay><![CDATA[ function() {this.title=values['INK2_3'];}]]></ondisplay></i>
+			<i id="16" title="INk2_4" color="#cab">
+			   <ondisplay><![CDATA[ function() {this.title=values['INK2_4'];}]]></ondisplay></i>
+			<i id="27" title="$hpDefrosting" color="#cab"></i>
+      <i id="28" title="$prewarm" color="#cab"></i>
+      <i id="29" title="$learning" color="#cab"></i>
+			<i id="30" title="$hpDefrosting" color="#cab"></i>
+      <i id="31" title="$filterTest" color="#cab"></i>
+      <i id="32" title="$perVentCirc" color="#cab"></i>
+      
+      
+         
+		</op>
+		<op id="Zone" type="boxes" title="$zone">
+			<i id="0" title="1" color="red">
+			   <ondisplay><![CDATA[ function() {this.title=values['Z1Text'];}]]></ondisplay>
+			</i>
+			<i id="1" title="2" color="magenta">
+			   <ondisplay><![CDATA[ function() {this.title=values['Z2Text'];}]]></ondisplay>
+			</i>
+			<i id="2" title="1+2" color="lightgreen">
+			   <ondisplay><![CDATA[ function() {this.title=values['Z3Text'];}]]></ondisplay>
+			</i>
+		</op>
+
+		<op id="Days" title="$dayOfWeek" type="boxes">
+		   <values><![CDATA[{0:'$monday',1:'$tuesday',2:'$wednesday',3:'$thursday',4:'$friday',5:'$saturday',6:'$sunday',7:'$holidays',8:'$vacations'}]]></values>
+		</op>
+<!--
+		<op id="AutoManTemp">
+			<i id="0" title="$automatic"/>
+			<i id="1" title="$manual"/>
+			<i id="2" title="$temporary" rw="0"/>
+		</op>		
+	-->
+
+		<op id="OnOff">
+			<i id="0" title="$off"/>
+			<i id="1" title="$on"/>
+		</op>
+		<op id="OffOn">
+			<i id="1" title="$off"/>
+			<i id="0" title="$on"/>
+		</op>
+ 
+		<op id="OffEnabled" title="$temperature">
+			<i id="0" title="$off" color="#666"/>
+			<i id="1" title="$allowed" color="#6f6"/>
+		</op>
+    
+		<op id="EnabDisab" title="$temperature">
+			<i id="0" title="$allowed" color="#666"/>
+			<i id="1" title="$off" color="#6f6"/>
+		</op>
+    
+<!--		<op id="Off"/>
+		<op id="OffMedOn" type="range" unit="">
+		   <values><![CDATA[{0:'$off',1:'$medium',2:'$maximum'}]]></values>
+		</op>
+		
+		<op id="AutoManual">
+			<i id="0" title="$automatic"/>
+			<i id="1" title="$manual"/>
+		</op>
+	<op id="InputBlock">
+			<i id="0" title="$non"/>
+			<i id="1" title="IN1">
+			   <ondisplay><![CDATA[ function() {this.title=values['IN1'];}]]></ondisplay>
+			</i>
+			<i id="2" title="IN2">
+			   <ondisplay><![CDATA[ function() {this.title=values['IN2'];}]]></ondisplay>
+			</i>
+			<i id="3" title="IN1+IN2">
+			   <ondisplay><![CDATA[ function() {this.title=values['IN1']+' + '+values['IN2'];}]]></ondisplay>
+			</i>
+		</op>
+		<op id="TempInput" type="range" minval="14.5" maxval="35" step=".5" unit="°C" title="$temperature"/>
+-->
+		<op id="TempSeason" type="range" minval="5" maxval="30" step=".1" stepset="5" dec="1" unit="°C" title="$temperature" from="50" to="300"/>
+
+		<op id="TempIZT" type="range" minval="20" maxval="70" step=".1" stepset="5" dec="1" unit="°C" title="$temperature" from="200" to="700"/>
+
+		<op id="SeasonType">
+			<i id="0" title="$heating"/>
+			<i id="1" title="$nonHeating"/>
+			<i id="2" title="T-ODA"/>
+			<i id="3" title="T-ODA+"/>
+		</op>
+    
+    <!-->tady<-->
+		<op id="AvgType">
+			<i id="0" title="1 h."/>
+			<i id="1" title="3 h."/>
+			<i id="2" title="6 h."/>
+			<i id="3" title="12 h."/>
+			<i id="4" title="1 d."/>
+			<i id="5" title="2 d."/>
+			<i id="6" title="3 d."/>
+			<i id="7" title="4 d."/>
+			<i id="8" title="5 d."/>
+			<i id="9" title="6 d."/>
+			<i id="10" title="7 d."/>
+			<i id="11" title="8 d."/>
+			<i id="12" title="9 d."/>
+			<i id="13" title="10 d."/>
+		</op>
+
+    
+    <!-->tady<-->  
+    
+    
+		<op id="InputBlock">
+			<i id="0" title="$non"/><i id="1" title="$heating"/><i id="2" title="$nonHeating"/>
+		</op>
+		<op id="dev01_030" type="range" minval=".1" maxval="3" step=".1" unit=" °C" from="1" to="30"/>
+		<op id="dev01_050" type="range" minval="0" maxval="5" step=".1" unit=" °C" from="0" to="50"/>
+    
+
+		<op id="Year" type="range" minval="2011" maxval="2050" step="1" unit=""/>
+		<op id="Month" type="range" minval="0" maxval="12" step="1" unit=""/>
+		<op id="Day" type="range" minval="1" maxval="31" step="1" unit=""/>
+		<op id="Hour" type="range" minval="0" maxval="23" step="1" unit=""/>
+		<op id="Minute" type="range" minval="0" maxval="59" step="1" unit=""/>
+		<op id="DateTime" type="dateTime" title="$dateTime"/>
+		<op id="Time" type="time" title="$time"/>
+		<op id="String" type="input" title="Text"/>
+
+<!--
+		<op id="BodyCount" type="range" minval="0" maxval="10" step="1" unit=""/>
+		<op id="dev01_012" type="range" minval=".1" maxval="1.2" step=".1" unit=" °C"/>
+		<op id="dev1_5" type="range" minval="1" maxval="5" step=".1" unit=" °C"/>
+		<op id="Corr01" type="range" minval="-3" maxval="3" step=".1" unit=" °C"/>
+		<op id="FilterChange" type="filterChange" title="$filterChange"/>
+-->
+		<op id="TimeZone" type="select"/>
+	</options>
+	<messages>
+	   <i id="notWhenAuto" type="warning" message="$notWhenAuto"/>
+	</messages>
+	<rules>
+<!--	   <i id="0" check="H11017" ruleval="0" affect="aTEMP" msgid="notWhenAuto" result="0"/> -->
+	</rules>
+	<body>
+		<menu id="RTS" title="$heatingSched" image="rts.gif">
+			<menu id="RTS_0" title="$monday" initial="1"><content type="actSetup"/></menu>
+			<menu id="RTS_1" title="$tuesday"><content type="actSetup"/></menu>
+			<menu id="RTS_2" title="$wednesday"><content type="actSetup"/></menu>
+			<menu id="RTS_3" title="$thursday"><content type="actSetup"/></menu>
+			<menu id="RTS_4" title="$friday"><content type="actSetup"/></menu>
+			<menu id="RTS_5" title="$saturday"><content type="actSetup"/></menu>
+			<menu id="RTS_6" title="$sunday"><content type="actSetup"/></menu>
+			<menu id="RTS_7" title="$holidays"><content type="actSetup"/></menu>
+			<menu id="RTS_8" title="$vacations"><content type="actSetup"/></menu>
+		</menu>
+		<menu id="RNS" title="$nonHeatingSched" image="rns.png">
+			<menu id="RNS_0" title="$monday" initial="1"><content type="actSetup"/></menu>
+			<menu id="RNS_1" title="$tuesday"><content type="actSetup"/></menu>
+			<menu id="RNS_2" title="$wednesday"><content type="actSetup"/></menu>
+			<menu id="RNS_3" title="$thursday"><content type="actSetup"/></menu>
+			<menu id="RNS_4" title="$friday"><content type="actSetup"/></menu>
+			<menu id="RNS_5" title="$saturday"><content type="actSetup"/></menu>
+			<menu id="RNS_6" title="$sunday"><content type="actSetup"/></menu>
+			<menu id="RNS_7" title="$holidays"><content type="actSetup"/></menu>
+			<menu id="RNS_8" title="$vacations"><content type="actSetup"/></menu>
+		</menu>
+		<menu id="UN" title="$userSetting" image="un.gif">
+	      <menu id="UNpar" title="$parameters" initial="1">
+	         <content>
+					<page id="vzt" title="$vztTitle" color="">
+						<i id="H11401" title="$tsNtsSwitch" options="SeasonType"/>
+						<i id="H11402" title="$tsNtsTemp" options="TempSeason"/>
+						<i id="I11401" title="$season" options="SeasonType" type="info"/>
+						<i id="H11431" title="$tOdaIntAvrg" options="AvgType"/>          <!--> tady <-->
+						<i id="I11420" title="$tOdaAvrg" options="Temp" type="info"/>
+					</page>
+<!--	            <i id="_s1" type="spacer" when="(values.H10533==1)" always="1"/>-->
+					<page id="izt" title="$iztTitle" when="values.H10533==1" >
+						<i id="H12925" title="$iztTreq1" options="TempIZT"/>
+						<i id="H12928" title="$iztTreq2" options="TempIZT"/>
+						
+<!--            <i id="_s5" type="spacer" always="1"/>             -->
+            <i id="I10238" title="IZT-horní část" options="TempInput" type="info" when="values.D10210==1" />
+            <i id="I10239" title="IZT-střední část" options="TempInput" type="info" when="values.D10210==1"/>
+            <i id="I10240" title="Krb-výstup" options="TempInput" type="info" when="values.D10210==1 &amp;&amp; values.H12980==1" />
+            <i id="I10241" title="Topná voda - okruh" options="TempInput" type="info" when="values.D10210==1 &amp;&amp; values.H12960==1" />
+            <i id="I10242" title="Přívod z ext.zdroje" options="TempInput" type="info" when="values.D10210==1 &amp;&amp; values.H12908==1" />
+            <i id="I10244" title="Solární panely" options="TempInput" type="info" when="values.D10210==1 &amp;&amp; values.H12950==1" />
+            <i id="I10247" title="IZT-horní část" options="TempInput" type="info" when="values.D10212==1" />
+            <i id="I10248" title="IZT-střední část" options="TempInput" type="info" when="values.D10212==1" />
+            <i id="I10249" title="Krb-výstup" options="TempInput" type="info" when="values.D10212==1 &amp;&amp; values.H12980==1" />
+            <i id="I10250" title="Topná voda - okruh" options="TempInput" type="info" when="values.D10212==1 &amp;&amp; values.H12960==1" />
+            <i id="I10251" title="Přívod z ext.zdroje" options="TempInput" type="info" when="values.D10212==1 &amp;&amp; values.H12908==1" />
+            <i id="I10253" title="Solární panely" options="TempInput" type="info" when="values.D10212==1 &amp;&amp; values.H12950==1" />            
+				    <i id="H12931" title="$iztControl" options="AutoManTempBox"/>
+        	</page>     
+          
+	         </content>
+           
+	      </menu>
+	      <menu id="UNcorr" title="$controlSetting">
+	         <content>
+					<i id="H10649" title="$in1Block" options="InputBlock"/>
+					<i id="H10656" title="$in2Block" options="InputBlock"/>
+					<i id="H11318" title="$hystHeat" options="dev01_030" />
+					<i id="H11208" title="$hystCool" options="dev01_030" />
+					<i id="H11209" title="$offsetCool" options="dev01_050" />
+          
+          
+<!--
+					<i id="H11201" title="$personsCount" options="BodyCount" when="(values[idLINE]!=3 &amp;&amp; values[idLINE]!=4)"/>
+					<i id="H11202" title="$devHeating" options="dev01_012" when="(values[idLINE]==0 || values[idLINE]==2)"/>
+					<i id="H11203" title="$devCooling" options="dev01_012" when="((values['H10508'] || values[idLINE]==2)  &amp;&amp; values[idLINE]&lt;3)"/>
+					<i id="H11204" title="$devCoolMax" options="dev1_5" when="((values['H10508'] || values[idLINE]==2) &amp;&amp; values[idLINE]&lt;3)"/>
+					<i id="H11205" title="$tempSenzorDev" options="Corr01"/>
+					<i id="H11209" title="$inputBlock" options="InputBlock" when="(values[idLINE]&gt;2)"/>
+					<i id="C10900" title="$thermostatFcn" options="OnOff" when="(values[idLINE]==1 &amp;&amp; values['H10504']==0)"/>
+					<i id="['H11206','H11207']" title="$filterChange" options="FilterChange" when="(values[idLINE]==1 || values[idLINE]==2)"/>
+					<i id="C10902" title="$nightBefCool" options="OnOff" when="(values['H11022']==0)"/>
+					<i id="C10902a" key="C10902" title="$nightBefCool" options="OnOff" when="(values['H11022']>0)" type="info"/>
+-->
+	         </content>
+			</menu>
+
+	    <menu id="UNholParty" title="$holidayParty">
+	         <content idactive="C10800">
+					<i id="H10801" title="$power" options="Power"/>
+					<i id="H10800" title="$mode" options="Mode" />
+					<i id="H10803" title="$zone" options="Zone"/>
+					<i id="H10802" title="$temperature" options="Temp100"/>
+					<i id="['H10804','H10805','H10806','H10807','H10808']" title="$partyStart" options="DateTime"/>
+					<i id="['H10809','H10810','H10811','H10812','H10813']" title="$partyEnd" options="DateTime"/>
+				</content>
+			</menu>
+	    <menu id="weeklyProgram" title="$weeklyProgram" when="(document.svgStart)">
+	         <content type="weekPrg">
+				</content>
+			</menu>
+      <menu id="UNnetwork" title="$netSetup" when="(values['H12345']=='0')">
+<!--	      <menu id="UNnetwork" title="$netSetup">                           -->
+	         <content type="netSetup" target="config/ip.cgi"/>
+			</menu>             
+	   
+        <menu id="Texts" title="$texts">
+	         <content source="config/texts" target="config/texts.cgi">
+	            <i id="D1" title="D1" options="String" always="1"/>
+	            <i id="D2" title="D2" options="String" always="1"/>
+	            <i id="D3" title="D3" options="String" always="1"/>
+	            <i id="D4" title="D4" options="String" always="1"/>
+	            <i id="IN1" title="IN1" options="String" always="1"/>
+	            <i id="IN2" title="IN2" options="String" always="1"/>
+	            <i id="_s1" type="spacer" always="1"/>
+	            <i id="Z1Text" title="$txtZone1" options="String" always="1"/>
+	            <i id="Z2Text" title="$txtZone2" options="String" always="1"/>
+	            <i id="Z3Text" title="$txtZone12" options="String" always="1"/>
+
+		         <i id="_ep2" type="endPage" when="(values.D10208==1)" always="1"/>
+					<i id="INK1_1" title="INk1_1" options="String" when="(values.D10208==1)" always="1"/>
+					<i id="INK1_2" title="INk2_1" options="String" when="(values.D10208==1)" always="1"/>
+					<i id="INK1_3" title="INk3_1" options="String" when="(values.D10208==1)" always="1"/>
+					<i id="INK1_4" title="INk4_1" options="String" when="(values.D10208==1)" always="1"/>
+	            <i id="_s2" type="spacer" when="(values.D10208==1)" always="1"/>
+					<i id="K1T_1" title="TRk1_1" options="String" when="(values.D10208==1)" always="1"/>
+					<i id="K1T_2" title="TRk2_1" options="String" when="(values.D10208==1)" always="1"/>
+					<i id="K1T_3" title="TRk3_1" options="String" when="(values.D10208==1)" always="1"/>
+					<i id="K1T_4" title="TRk4_1" options="String" when="(values.D10208==1)" always="1"/>
+					<i id="K1T_5" title="TRk5_1" options="String" when="(values.D10208==1)" always="1"/>
+
+		         <i id="_ep3" type="endPage" when="(values.D10209==1)" always="1"/>
+					<i id="INK2_1" title="INk1_2" options="String" when="(values.D10209==1)" always="1"/>
+					<i id="INK2_2" title="INk2_2" options="String" when="(values.D10209==1)" always="1"/>
+					<i id="INK2_3" title="INk3_2" options="String" when="(values.D10209==1)" always="1"/>
+					<i id="INK2_4" title="INk4_2" options="String" when="(values.D10209==1)" always="1"/>
+	            <i id="_s3" type="spacer" when="(values.D10209==1)" always="1"/>
+					<i id="K2T_1" title="TRk1_2" options="String" when="(values.D10209==1)" always="1"/>
+					<i id="K2T_2" title="TRk2_2" options="String" when="(values.D10209==1)" always="1"/>
+					<i id="K2T_3" title="TRk3_2" options="String" when="(values.D10209==1)" always="1"/>
+					<i id="K2T_4" title="TRk4_2" options="String" when="(values.D10209==1)" always="1"/>
+					<i id="K2T_5" title="TRk5_2" options="String" when="(values.D10209==1)" always="1"/>
+				</content>
+			</menu>
+			<menu id="Holiday" title="$holidayVacation">
+	         <content type="holiday"/>
+			</menu>
+			<menu id="dateAndTime" title="$dateTime">
+				<content confirm="C00003">
+					<i id="['I00004','I00005','I00006','I00007','I00008']" idw="H10905,H10906,H10907,H10908,H10909" title="$unitTime" options="DateTime"/>
+					<i id="H11400" title="$timeZone" options="TimeZone"/>
+					<i id="H11405" title="$timeAutoSwitch" options="OnOff"/>
+					<i id="H11406" title="$timeSyncInet" options="OffOn"/>
+					
+				</content>
+			</menu>
+	      <menu id="XXXXwd" title="$XXXXwordMenu"  when="(values['H12345']=='0')">
+	         <content type="XXXXwd"/>
+			</menu>
+	      <menu id="SWinfo" title="$swInfo">
+	         <content type="swInfo" target="config/texts.cgi"/>
+			</menu>
+	      <menu id="Comm" title="$commun">
+	         <content>
+          <i id="C11402" title="$serverPing" options="OnOff" when="(values.H12345==0)"  />            
+					<i id="C11406" title="$acsService" options="EnabDisab"/>
+					<i id="C11407" title="$acsDistr" options="EnabDisab"/>
+	            <i id="www" title="www" options="String" always="1" type="info"/>
+					<i id="['I11414','I11415','I11416','I11417','I11418']" title="$lastCommun" options="DateTime" type="info"/>
+				</content>
+			</menu>
+
+		</menu>
+		<menu id="AL" title="$alarms" image="warning.png" type="warning">
+	      <menu id="Alarms" title="$alarms" initial="1">
+				<content type="alarms"/>
+			</menu>
+		</menu>	
+		<content>
+			<i id="H10700" title="$controlAC" options="AutoManTempBox">
+				<displayval><![CDATA[function() {
+					if(values.H10700==2 || values.H10701==2 || values.H10702==2 || values.H10703==2)
+						return 2;
+					else
+						return values.H10702;
+				}]]></displayval>
+			   <onchange><![CDATA[function(val){
+send2Unit(getUrlPar('H10700',val)+'&'+getUrlPar('H10701',val)+'&'+getUrlPar('H10702',val)+'&'+getUrlPar('H10703',val));
+saved=true;}]]></onchange>
+			</i>
+			<i id="H10706" title="$requiredTemp" options="Temp100">
+			   <onchange><![CDATA[function(val) {
+          <!-- getURLPar('H10706',val); --> 
+					send2Unit(getUrlPar('H10710',val)+(values.H10702==1?'&'+getUrlPar('H10702',2):''));
+					saved=true;
+				}]]>
+				</onchange>
+			</i>
+
+			<i id="H10704" idw="H10714" title="$currentPower" titlew="$requiredPower" options="Power">
+			   <onchange><![CDATA[function(val) {
+					saved=true;
+          <!-- getURLPar('H10704',val); -->
+					send2Unit(getUrlPar('H10708',val)+(values.H10700==1?'&'+getUrlPar('H10700',2):''));
+					if(val>0 && values.H10715==0){
+						if((document.svgStart)){
+							document.screens.main.getElementsByTagName('g')[2].onclick(null);
+						}else{
+							flyDown=false;
+							this.nextSibling.nextSibling.onmousedown();
+						}
+					}
+					}]]>
+				</onchange>     
+			</i>
+			<i id="I10202" title="$outdoorTemp" options="TempInput" type="info">
+<displayval><![CDATA[function() {
+	var val, na=false;
+	if(values.H10508==0){
+		if(values.H10501==1 && values.H10201>0)
+			val=values.I10211;
+		else if(values.H10501==2 && values.H10200>0)
+			val=values.I10211;
+		else
+			na=true;
+	}else if(values.H10508==1)
+			     val=values.I10211;
+        else na=true;
+	if(na) return words['unavail'];
+	return val;
+}]]></displayval></i>
+			<i id="H10705" idw="H10715" title="$currentMode" titlew="$requiredMode" options="Mode">
+				<displayval><![CDATA[function(mob) {
+				if(mob)
+					return (values.H10712>0 ? values.H10712: values.H10705);
+				return (values.H10712>0 ? options.ModeText.display(values.H10712): values.H10705);
+				}]]></displayval>
+				<onchange><![CDATA[function(val) {
+					saved=true;
+          <!--getURLPar('H10705',val);  -->
+					send2Unit(getUrlPar('H10709',val)+(values.H10701==1?'&'+getUrlPar('H10701',2):''));
+				}]]>
+				</onchange>
+			</i>
+			<i id="I10200" title="$indoorTemp" options="TempInput" type="info">
+			<displayval><![CDATA[function() {
+				var val, na=false;
+				if(values.H10514==0 || values.H10514==2  || values.H10514==3 || values.H10532==1){
+					val=values.I10215;
+				}else if(values.H10514==1){
+					if(values.H10501==1 && values.H10200>0)
+						val=values.I10203;
+					else if(values.H10501==2 && values.H10201>0)
+						val=values.I10202;
+					else
+						na=true;
+				}else na=true;
+				if(na) return words['unavail'];
+				return val;
+			}]]></displayval></i>
+			<i id="H10707" idw="H10717" title="$zone" titlew="$currentZone" options="Zone">
+			<onchange><![CDATA[function(val) {
+				saved=true;
+        <!--getURLPar('H10704',val);   -->
+				send2Unit(getUrlPar('H10711',val)+(values.H10703==1?'&'+getUrlPar('H10703',2):''));
+			}]]>
+			</onchange></i>
+			<i id="I10204" title="$inletTemp" options="TempInput" type="info">
+			<displayval><![CDATA[function() {
+				var val, na=false;
+				if((values.H10501==1 && values.H10200>0)||(values.H10501==2 && values.H10201>0))
+					val=values.I10212;
+				else 						
+					na=true;
+				if(na) return words.unavail;
+				return val;
+			}]]></displayval></i>
+				
+		</content>	
+	</body>
+	<languages> <!-- tato definice MUSÍ být vždy na konci -->
+		<i id="0" title="$czech"/>
+	   <i id="1" title="$german"/>
+	   <i id="2" title="$english"/>
+	   <i id="3" title="$lettish"/>
+	   <i id="4" title="$polish"/>
+     <i id="5" title="$hungar"/>
+     <i id="6" title="$italiano"/>
+     <i id="7" title="$french"/>
+     <i id="8" title="$spanish"/>    
+     <i id="9" title="$russian"/>   
+     <i id="10" title="$croatian"/>
+     <i id="11" title="$romanian"/> 
+     <i id="12" title="$bulgarian"/>    
+     <i id="13" title="$danish"/>  
+     
+	</languages>
+</layout></root>
