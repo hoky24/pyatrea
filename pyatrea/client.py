@@ -205,6 +205,24 @@ class AtreaClient:
         forced = parser.parse_supported_forced_modes(raw)
         return writable, ids_to_modes, modes_to_ids, forced
 
+    async def fetch_userctrl(
+        self,
+    ) -> tuple[
+        dict[AtreaMode, bool],
+        dict[int, AtreaMode],
+        dict[AtreaMode, int],
+        dict[int, AtreaMode],
+    ]:
+        """Static userctrl.xml data (ModeEC writable map, id<->mode maps, forced
+        modes). Firmware-static — fetch once and cache; combine with
+        supported_modes_from_status(status) for the per-cycle bitmask overlay."""
+        async with self._lock:
+            text = await self._get("lang/userCtrl.xml")
+        raw = text.encode()
+        ec_writable, ids_to_modes, modes_to_ids = parser.parse_supported_modes(raw)
+        forced = parser.parse_supported_forced_modes(raw)
+        return ec_writable, ids_to_modes, modes_to_ids, forced
+
     def command_builder(self, params: AtreaParams, known_registers: set[str],
                         **kw: object) -> CommandBuilder:
         return CommandBuilder(params=params, known_registers=known_registers, **kw)  # type: ignore[arg-type]

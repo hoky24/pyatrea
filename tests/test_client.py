@@ -116,6 +116,17 @@ async def test_commit_empty_builder_is_noop(client):
     assert await client.commit(builder) is False
 
 
+async def test_fetch_userctrl_returns_static_maps(client):
+    import re
+    from tests.conftest import load
+    with aioresponses() as m:
+        m.get(re.compile(r".*userCtrl\.xml.*"), status=200, body=load("userctrl.xml"))
+        ec_writable, ids_to_modes, modes_to_ids, forced = await client.fetch_userctrl()
+        assert isinstance(ec_writable, dict)
+        assert isinstance(forced, dict)
+        assert all(modes_to_ids[m] == i for i, m in ids_to_modes.items())
+
+
 async def test_commit_reauths_on_403_body(client):
     import re
     with aioresponses() as m:
