@@ -212,11 +212,14 @@ class AtreaClient:
     async def commit(self, builder: CommandBuilder) -> bool:
         if not builder.commands:
             return False
-        url = self._url("config/xml.cgi")
-        for register, value in builder.commands.items():
-            url += f"&{register}{value}"
+        suffix = "".join(f"&{r}{v}" for r, v in builder.commands.items())
         async with self._lock:
-            await self._request(url)
+            text = await self._request(self._url("config/xml.cgi") + suffix)
+            if "HTTP: 403 Forbidden" in text:
+                await self._authenticate()
+                text = await self._request(self._url("config/xml.cgi") + suffix)
+                if "HTTP: 403 Forbidden" in text:
+                    raise AtreaAuthError("403 after re-auth on commit")
         return True
 
     async def _frontend_version(self) -> str | None:

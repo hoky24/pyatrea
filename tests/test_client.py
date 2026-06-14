@@ -116,6 +116,35 @@ async def test_commit_empty_builder_is_noop(client):
     assert await client.commit(builder) is False
 
 
+async def test_commit_reauths_on_403_body(client):
+    import re
+    with aioresponses() as m:
+        m.get(re.compile(r".*config/xml\.cgi.*"), status=200, body=b"HTTP: 403 Forbidden")
+        m.get(re.compile(r".*login\.cgi.*"), status=200, body=b"<a>TOKEN</a>")
+        m.get(re.compile(r".*config/xml\.cgi.*"), status=200, body=b"")
+        b = client.command_builder(params=__import__("pyatrea").AtreaParams(ids=["H10708"]),
+                                   known_registers={"H10708"})
+        b.set_power(40)
+        assert await client.commit(b) is True
+
+
+async def test_commit_persistent_403_raises_auth(client):
+    import re
+
+    import pytest
+
+    from pyatrea.exceptions import AtreaAuthError
+    with aioresponses() as m:
+        m.get(re.compile(r".*config/xml\.cgi.*"), status=200, body=b"HTTP: 403 Forbidden")
+        m.get(re.compile(r".*login\.cgi.*"), status=200, body=b"<a>denied</a>")
+        m.get(re.compile(r".*config/xml\.cgi.*"), status=200, body=b"HTTP: 403 Forbidden")
+        b = client.command_builder(params=__import__("pyatrea").AtreaParams(ids=["H10708"]),
+                                   known_registers={"H10708"})
+        b.set_power(40)
+        with pytest.raises(AtreaAuthError):
+            await client.commit(b)
+
+
 async def test_is_atrea_unit_denied_returns_true(client):
     with aioresponses() as m:
         m.get(re.compile(r".*login\.cgi.*"), status=200, body=b"<a>denied</a>")
