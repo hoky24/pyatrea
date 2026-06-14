@@ -8,7 +8,7 @@ from aioresponses import aioresponses
 from pyatrea.client import AtreaClient
 from pyatrea.const import AtreaMode, AtreaProgram
 from pyatrea.exceptions import AtreaAuthError, AtreaConnectionError
-from pyatrea.models import AtreaStatus
+from pyatrea.models import AtreaParams, AtreaStatus
 from tests.conftest import load
 
 
@@ -87,3 +87,34 @@ def test_forced_mode_of_defaults_off():
 
 def test_id_of_returns_none_when_incomplete():
     assert AtreaClient.id_of(AtreaStatus(registers={})) is None
+
+
+async def test_commit_sends_register_payload(client):
+    sent = {}
+
+    def cb(url, **kwargs):
+        sent["url"] = str(url)
+
+    with aioresponses() as m:
+        m.get(re.compile(r".*config/xml\.cgi.*"), status=200, body=b"", callback=cb)
+        builder = client.command_builder(
+            params=AtreaParams(ids=["H10708", "H01020"]),
+            known_registers={"H10708", "H01020"},
+        )
+        builder.set_power(40)
+        ok = await client.commit(builder)
+        assert ok is True
+        assert "H1070800040" in sent["url"]
+
+
+async def test_commit_empty_builder_is_noop(client):
+    builder = client.command_builder(params=AtreaParams(), known_registers=set())
+    assert await client.commit(builder) is False
+
+
+def test_public_exports():
+    import pyatrea
+    for name in ("AtreaClient", "AtreaMode", "AtreaProgram", "AtreaParams",
+                 "AtreaStatus", "AtreaError", "AtreaConnectionError",
+                 "AtreaAuthError", "AtreaResponseError", "CommandBuilder"):
+        assert hasattr(pyatrea, name)

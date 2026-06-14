@@ -9,6 +9,7 @@ from xml.etree import ElementTree as ET
 import aiohttp
 
 from . import parser
+from .commands import CommandBuilder
 from .const import REQUEST_TIMEOUT, AtreaMode, AtreaProgram
 from .exceptions import AtreaAuthError, AtreaConnectionError, AtreaResponseError
 from .models import AtreaParams, AtreaStatus
@@ -193,6 +194,20 @@ class AtreaClient:
         writable = bitmask_writable if bitmask_writable is not None else ec_writable
         forced = parser.parse_supported_forced_modes(raw)
         return writable, ids_to_modes, forced
+
+    def command_builder(self, params: AtreaParams, known_registers: set[str],
+                        **kw: object) -> CommandBuilder:
+        return CommandBuilder(params=params, known_registers=known_registers, **kw)  # type: ignore[arg-type]
+
+    async def commit(self, builder: CommandBuilder) -> bool:
+        if not builder.commands:
+            return False
+        url = "config/xml.cgi"
+        for register, value in builder.commands.items():
+            url += f"&{register}{value}"
+        async with self._lock:
+            await self._get(url)
+        return True
 
     async def is_atrea_unit(self) -> bool:
         try:
