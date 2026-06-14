@@ -6,7 +6,9 @@ import pytest
 from aioresponses import aioresponses
 
 from pyatrea.client import AtreaClient
+from pyatrea.const import AtreaMode, AtreaProgram
 from pyatrea.exceptions import AtreaAuthError, AtreaConnectionError
+from pyatrea.models import AtreaStatus
 from tests.conftest import load
 
 
@@ -50,3 +52,24 @@ async def test_persistent_403_raises_auth_error(client):
               body=b"HTTP: 403 Forbidden")
         with pytest.raises(AtreaAuthError):
             await client.fetch_status()
+
+
+async def test_fetch_status_includes_params(client):
+    with aioresponses() as m:
+        m.get(re.compile(r".*config/xml\.xml.*"), status=200, body=load("status.xml"))
+        m.get(re.compile(r".*user/params\.xml.*"), status=200, body=load("params.xml"))
+        status = await client.fetch_status(with_params=True)
+        assert isinstance(status.params.ids, list)
+
+
+def test_program_of_maps_registers():
+    assert AtreaClient.program_of(AtreaStatus(registers={"H10700": "0"})) == AtreaProgram.MANUAL
+    assert AtreaClient.program_of(AtreaStatus(registers={"H10700": "1"})) == AtreaProgram.WEEKLY
+    assert AtreaClient.program_of(AtreaStatus(registers={"H10700": "2"})) == AtreaProgram.TEMPORARY
+    assert AtreaClient.program_of(AtreaStatus(registers={})) is None
+
+
+def test_mode_of_guards_bad_value():
+    assert AtreaClient.mode_of(AtreaStatus(registers={"H10705": "2"})) == AtreaMode.VENTILATION
+    assert AtreaClient.mode_of(AtreaStatus(registers={"H10705": "999"})) is None
+    assert AtreaClient.mode_of(AtreaStatus(registers={})) is None

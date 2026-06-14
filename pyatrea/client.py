@@ -9,9 +9,9 @@ from xml.etree import ElementTree as ET
 import aiohttp
 
 from . import parser
-from .const import REQUEST_TIMEOUT
+from .const import REQUEST_TIMEOUT, AtreaMode, AtreaProgram
 from .exceptions import AtreaAuthError, AtreaConnectionError, AtreaResponseError
-from .models import AtreaStatus
+from .models import AtreaParams, AtreaStatus
 
 
 class AtreaClient:
@@ -68,7 +68,40 @@ class AtreaClient:
                 raise AtreaAuthError("403 after re-auth")
         return text
 
-    async def fetch_status(self) -> AtreaStatus:
+    async def fetch_params(self) -> AtreaParams:
+        async with self._lock:
+            text = await self._get("user/params.xml")
+        return parser.parse_params(text.encode())
+
+    async def fetch_status(self, with_params: bool = False) -> AtreaStatus:
         async with self._lock:
             text = await self._get_status_text()
-        return parser.parse_status(text.encode())
+        status = parser.parse_status(text.encode())
+        if with_params:
+            status.params = await self.fetch_params()
+        return status
+
+    @staticmethod
+    def program_of(status: AtreaStatus) -> AtreaProgram | None:
+        for reg, mapping in (
+            ("H10700", {0: AtreaProgram.MANUAL, 1: AtreaProgram.WEEKLY, 2: AtreaProgram.TEMPORARY}),
+            ("H01015", {1: AtreaProgram.MANUAL, 0: AtreaProgram.WEEKLY, 2: AtreaProgram.TEMPORARY}),
+        ):
+            if reg in status.registers:
+                value = status.value(reg)
+                return mapping.get(int(value)) if value is not None else None
+        return None
+
+    @staticmethod
+    def mode_of(status: AtreaStatus,
+                ids_to_modes: dict[int, AtreaMode] | None = None) -> AtreaMode | None:
+        if "H10705" in status.registers:
+            value = status.value("H10705")
+            try:
+                return AtreaMode(int(value)) if value is not None else None
+            except ValueError:
+                return None
+        if "H01000" in status.registers and ids_to_modes:
+            value = status.value("H01000")
+            return ids_to_modes.get(int(value)) if value is not None else None
+        return None
