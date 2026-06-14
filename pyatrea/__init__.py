@@ -22,6 +22,12 @@ import string
 import random
 from enum import IntEnum
 
+# Seconds before an HTTP call to the unit gives up. Without a timeout a wedged
+# Atrea web stack (accepts the TCP connection but never replies — seen on RD5
+# firmware after a write storm) blocks the calling thread forever; in Home
+# Assistant that stalls the executor or the event loop with no recovery.
+REQUEST_TIMEOUT = 15
+
 
 class AtreaProgram(IntEnum):
     MANUAL = 0
@@ -131,7 +137,7 @@ class Atrea:
             or self.translations["words"] == {}
         ) and not self.gettingTranslations:
             self.gettingTranslations = True
-            response = requests.get(self.getURL("lang/texts_2.xml"))
+            response = requests.get(self.getURL("lang/texts_2.xml"), timeout=REQUEST_TIMEOUT)
             if response.status_code == 200:
                 xmldoc = ET.fromstring(response.content)
                 if xmldoc.tag == "compress":
@@ -145,7 +151,7 @@ class Atrea:
 
     def getConfigDir(self):
         if not self.configDir:
-            response = requests.get(self.getURL("cfgdir.xml"))
+            response = requests.get(self.getURL("cfgdir.xml"), timeout=REQUEST_TIMEOUT)
             if response.status_code == 200 and "HTTP: 404 Page" not in response.text:
                 self.configDir = ET.fromstring(response.content)
                 return self.configDir
@@ -218,7 +224,7 @@ class Atrea:
             self.params["ids"] = []
             self.params["coefs"] = {}
             self.params["offsets"] = {}
-            response = requests.get(self.getURL("user/params.xml"))
+            response = requests.get(self.getURL("user/params.xml"), timeout=REQUEST_TIMEOUT)
             if response.status_code == 200:
                 xmldoc = ET.fromstring(response.content)
                 for param in xmldoc.findall("params"):
@@ -246,12 +252,12 @@ class Atrea:
 
     def getStatus(self, useCache=True):
         if not self.status or not useCache:
-            response = requests.get(self.getURL("config/xml.xml"))
+            response = requests.get(self.getURL("config/xml.xml"), timeout=REQUEST_TIMEOUT)
 
             if response.status_code == 200:
                 if "HTTP: 403 Forbidden" in response.text:
                     self.auth()
-                    response = requests.get(self.getURL("config/xml.xml"))
+                    response = requests.get(self.getURL("config/xml.xml"), timeout=REQUEST_TIMEOUT)
                     if (
                         response.status_code == 200
                         and "HTTP: 403 Forbidden" in response.text
@@ -317,7 +323,7 @@ class Atrea:
                 else:
                     self.writable_modes[i] = int(binary_writable_modes[7 - i]) != 0
         else:
-            response = requests.get(self.getURL("lang/userCtrl.xml"))
+            response = requests.get(self.getURL("lang/userCtrl.xml"), timeout=REQUEST_TIMEOUT)
             if response.status_code == 200:
                 xmldoc = ET.fromstring(response.content)
                 modeEcNode = xmldoc.find("./layout/options/op[@id='ModeEC']")
@@ -385,7 +391,7 @@ class Atrea:
 
     def loadSupportedForcedModes(self):
         self.forcedModes = {}
-        response = requests.get(self.getURL("lang/userCtrl.xml"))
+        response = requests.get(self.getURL("lang/userCtrl.xml"), timeout=REQUEST_TIMEOUT)
         if response.status_code != 200:
             return False
 
@@ -442,7 +448,7 @@ class Atrea:
 
     def loadUserLabels(self):
         labels = {}
-        response = requests.get(self.getURL("config/texts.xml"))
+        response = requests.get(self.getURL("config/texts.xml"), timeout=REQUEST_TIMEOUT)
         if response.status_code == 200:
             xmldoc = ET.fromstring(response.content)
             textsNode = xmldoc.find("texts")
@@ -483,7 +489,7 @@ class Atrea:
         return None
 
     def getFrontendVersionFromVer(self):
-        response = requests.get(self.getURL("ver.txt"))
+        response = requests.get(self.getURL("ver.txt"), timeout=REQUEST_TIMEOUT)
         if response.status_code == 200:
             version = ""
             try:
@@ -502,7 +508,7 @@ class Atrea:
         return False
 
     def isAtreaUnit(self):
-        response = requests.get(self.getURL("config/login.cgi?magic="))
+        response = requests.get(self.getURL("config/login.cgi?magic="), timeout=REQUEST_TIMEOUT)
         if response.status_code == 200:
             xmldoc = ET.fromstring(response.content)
             if xmldoc.text == "denied":
@@ -516,7 +522,7 @@ class Atrea:
 
     def auth(self):
         magic = hashlib.md5(("\r\n" + self.password).encode("utf-8")).hexdigest()
-        response = requests.get(self.getURL("config/login.cgi?magic=" + magic))
+        response = requests.get(self.getURL("config/login.cgi?magic=" + magic), timeout=REQUEST_TIMEOUT)
         if response.status_code == 200:
             xmldoc = ET.fromstring(response.content)
             if xmldoc.text == "denied":
@@ -545,7 +551,7 @@ class Atrea:
         if len(self.commands) > 0:
             for register in self.commands:
                 url = url + "&" + register + self.commands[register]
-            response = requests.get(url)
+            response = requests.get(url, timeout=REQUEST_TIMEOUT)
             success = response.status_code == 200
             if success:
                 # Invalidate caches after successful HTTP write so subsequent
