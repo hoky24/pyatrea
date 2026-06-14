@@ -106,3 +106,18 @@ def test_translations_parser_smoke():
     result = parse_translations(load("texts_2.xml"))
     assert set(result.keys()) == {"params", "words"}
     assert isinstance(result["params"], dict)
+
+
+def test_forced_modes_parser_returns_dict():
+    from pyatrea.parser import parse_supported_forced_modes
+    from pyatrea.const import AtreaMode
+    result = parse_supported_forced_modes(load("userctrl.xml"))
+    assert isinstance(result, dict)
+    assert all(isinstance(v, AtreaMode) for v in result.values())
+
+
+def test_supported_modes_parser_returns_writable_map():
+    from pyatrea.parser import parse_supported_modes
+    modes, ids_to_modes = parse_supported_modes(load("userctrl.xml"))
+    assert isinstance(modes, dict)
+    assert isinstance(ids_to_modes, dict)
