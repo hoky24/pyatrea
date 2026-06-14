@@ -484,7 +484,9 @@ class Atrea:
     def getSupportedForcedModes(self):
         if self.forcedModes is None:
             self.loadSupportedForcedModes()
-        return self.forcedModes
+        # forcedModes stays None internally as a retry sentinel after a failed
+        # load, but always hand callers a dict so e.g. .items() is safe.
+        return self.forcedModes if self.forcedModes is not None else {}
 
     def getForcedMode(self):
         status = self.getStatus()
