@@ -134,6 +134,13 @@ async def test_is_atrea_unit_non_atrea_404_without_ver_returns_false(client):
         assert await client.is_atrea_unit() is False
 
 
+def test_latest_version_of_partial_returns_default():
+    from pyatrea.models import AtreaStatus
+    # I10009 present but I10007/I10008 absent must NOT raise
+    s = AtreaStatus(registers={"I10009": "3"})
+    assert AtreaClient.latest_version_of(s) == "0.0"
+
+
 def test_public_exports():
     import pyatrea
     for name in ("AtreaClient", "AtreaMode", "AtreaProgram", "AtreaParams",

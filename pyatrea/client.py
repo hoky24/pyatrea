@@ -122,11 +122,11 @@ class AtreaClient:
     @staticmethod
     def latest_version_of(status: AtreaStatus) -> str:
         r = status.registers
+        if not {"I10007", "I10008"} <= r.keys():
+            return "0.0"
         if "I10009" in r and int(r["I10009"]) > 0:
             return f'{r["I10007"]}.{r["I10008"]}.{r["I10009"]}'
-        if "I10007" in r and "I10008" in r:
-            return f'{r["I10007"]}.{r["I10008"]}'
-        return "0.0"
+        return f'{r["I10007"]}.{r["I10008"]}'
 
     @staticmethod
     def id_of(status: AtreaStatus) -> str | None:
