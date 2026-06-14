@@ -227,38 +227,46 @@ class Atrea:
         return "0.0"
 
     def getParams(self, useCache=True):
-        if not self.params or not useCache:
-            self.params = {}
-            self.params["warning"] = []
-            self.params["alert"] = []
-            self.params["ids"] = []
-            self.params["coefs"] = {}
-            self.params["offsets"] = {}
-            response = requests.get(self.getURL("user/params.xml"), timeout=REQUEST_TIMEOUT)
-            if response.status_code == 200:
+        if self.params and useCache:
+            return self.params
+
+        # Build into a local dict and commit to the cache (self.params) only on
+        # a successful fetch+parse. Previously a transient HTTP failure stored an
+        # empty-but-truthy params set that was then cached forever (useCache
+        # defaults True), so coefs/offsets/ids were silently lost until restart.
+        # Callers always receive a well-formed dict.
+        params = {
+            "warning": [],
+            "alert": [],
+            "ids": [],
+            "coefs": {},
+            "offsets": {},
+        }
+        response = requests.get(self.getURL("user/params.xml"), timeout=REQUEST_TIMEOUT)
+        if response.status_code == 200:
+            try:
                 xmldoc = ET.fromstring(response.content)
-                for param in xmldoc.findall("params"):
-                    for child in list(param):
-                        if child.tag == "i":
-                            if "id" in child.attrib:
-                                id = child.attrib["id"]
-                                self.params["ids"].append(id)
-                                if "flag" in child.attrib:
-                                    if child.attrib["flag"] == "W":
-                                        self.params["warning"].append(id)
-                                    elif child.attrib["flag"] == "A":
-                                        self.params["alert"].append(id)
+            except ET.ParseError:
+                return params
+            for param in xmldoc.findall("params"):
+                for child in list(param):
+                    if child.tag == "i":
+                        if "id" in child.attrib:
+                            id = child.attrib["id"]
+                            params["ids"].append(id)
+                            if "flag" in child.attrib:
+                                if child.attrib["flag"] == "W":
+                                    params["warning"].append(id)
+                                elif child.attrib["flag"] == "A":
+                                    params["alert"].append(id)
 
-                                if "coef" in child.attrib:
-                                    self.params["coefs"][id] = float(
-                                        child.attrib["coef"]
-                                    )
+                            if "coef" in child.attrib:
+                                params["coefs"][id] = float(child.attrib["coef"])
 
-                                if "offset" in child.attrib:
-                                    self.params["offsets"][id] = float(
-                                        child.attrib["offset"]
-                                    )
-        return self.params
+                            if "offset" in child.attrib:
+                                params["offsets"][id] = float(child.attrib["offset"])
+            self.params = params
+        return params
 
     def getStatus(self, useCache=True):
         if not self.status or not useCache:
@@ -350,7 +358,7 @@ class Atrea:
             if response.status_code == 200:
                 xmldoc = ET.fromstring(response.content)
                 modeEcNode = xmldoc.find("./layout/options/op[@id='ModeEC']")
-                if modeEcNode:
+                if modeEcNode is not None:
                     for option in modeEcNode:
                         if "title" in option.attrib:
                             title = option.attrib["title"]
@@ -422,12 +430,22 @@ class Atrea:
     def loadSupportedForcedModes(self):
         self.forcedModes = {}
         response = requests.get(self.getURL("lang/userCtrl.xml"), timeout=REQUEST_TIMEOUT)
+        # On any failure leave forcedModes as None so getSupportedForcedModes()
+        # retries on the next call instead of caching an empty result forever.
         if response.status_code != 200:
+            self.forcedModes = None
             return False
 
-        xmldoc = ET.fromstring(response.content)
+        try:
+            xmldoc = ET.fromstring(response.content)
+        except ET.ParseError:
+            self.forcedModes = None
+            return False
+        # 'is None': an Element with no children is falsy, so 'if not node'
+        # would wrongly treat a present-but-empty node as missing.
         node = xmldoc.find("./layout/options/op[@id='ModeText']")
-        if not node:
+        if node is None:
+            self.forcedModes = None
             return False
 
         for option in node:
@@ -482,7 +500,7 @@ class Atrea:
         if response.status_code == 200:
             xmldoc = ET.fromstring(response.content)
             textsNode = xmldoc.find("texts")
-            if textsNode:
+            if textsNode is not None:
                 for text in textsNode:
                     labels[text.attrib["id"]] = text.attrib["value"]
         return labels
