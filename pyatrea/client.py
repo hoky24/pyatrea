@@ -185,18 +185,25 @@ class AtreaClient:
 
     async def fetch_supported(
         self, status: AtreaStatus
-    ) -> tuple[dict[AtreaMode, bool], dict[int, AtreaMode], dict[int, AtreaMode]]:
-        """Return (writable_modes, ids_to_modes, forced_modes). Supported modes
-        come from the I12004 bitmask when present (RD5), else from the userctrl
-        ModeEC op (other firmware)."""
+    ) -> tuple[
+        dict[AtreaMode, bool],
+        dict[int, AtreaMode],
+        dict[AtreaMode, int],
+        dict[int, AtreaMode],
+    ]:
+        """Return (writable_modes, ids_to_modes, modes_to_ids, forced_modes).
+        Supported modes come from the I12004 bitmask when present (RD5), else
+        from the userctrl ModeEC op (other firmware). ids_to_modes/modes_to_ids
+        come from the ModeEC parse (empty for bitmask-only RD5 units, which is
+        correct since those use enum-equal ids)."""
         async with self._lock:
             text = await self._get("lang/userCtrl.xml")
         raw = text.encode()
-        ec_writable, ids_to_modes = parser.parse_supported_modes(raw)
+        ec_writable, ids_to_modes, modes_to_ids = parser.parse_supported_modes(raw)
         bitmask_writable = parser.supported_modes_from_status(status)
         writable = bitmask_writable if bitmask_writable is not None else ec_writable
         forced = parser.parse_supported_forced_modes(raw)
-        return writable, ids_to_modes, forced
+        return writable, ids_to_modes, modes_to_ids, forced
 
     def command_builder(self, params: AtreaParams, known_registers: set[str],
                         **kw: object) -> CommandBuilder:

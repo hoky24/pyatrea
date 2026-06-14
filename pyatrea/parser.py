@@ -150,25 +150,27 @@ def parse_supported_forced_modes(content: bytes) -> dict[int, AtreaMode]:
 
 def parse_supported_modes(
     content: bytes,
-) -> tuple[dict[AtreaMode, bool], dict[int, AtreaMode]]:
+) -> tuple[dict[AtreaMode, bool], dict[int, AtreaMode], dict[AtreaMode, int]]:
     writable: dict[AtreaMode, bool] = {m: False for m in AtreaMode}
     ids_to_modes: dict[int, AtreaMode] = {}
+    modes_to_ids: dict[AtreaMode, int] = {}
     try:
         xmldoc = ET.fromstring(content)
     except ET.ParseError as err:
         raise AtreaResponseError("malformed userctrl XML") from err
     node = xmldoc.find("./layout/options/op[@id='ModeEC']")
     if node is None:
-        return writable, ids_to_modes
+        return writable, ids_to_modes, modes_to_ids
     for option in node:
         title = option.attrib.get("title")
         mode = _MODE_TITLE_TO_MODE.get(title) if title else None
         if mode is not None:
             oid = int(option.attrib["id"])
             ids_to_modes[oid] = mode
+            modes_to_ids[mode] = oid
             if option.attrib.get("rw", "1") == "1":
                 writable[mode] = True
-    return writable, ids_to_modes
+    return writable, ids_to_modes, modes_to_ids
 
 
 def supported_modes_from_status(

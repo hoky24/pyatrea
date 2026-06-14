@@ -118,9 +118,17 @@ def test_forced_modes_parser_returns_dict():
 
 def test_supported_modes_parser_returns_writable_map():
     from pyatrea.parser import parse_supported_modes
-    modes, ids_to_modes = parse_supported_modes(load("userctrl.xml"))
+    modes, ids_to_modes, modes_to_ids = parse_supported_modes(load("userctrl.xml"))
     assert isinstance(modes, dict)
     assert isinstance(ids_to_modes, dict)
+    assert isinstance(modes_to_ids, dict)
+
+
+def test_parse_supported_modes_returns_modes_to_ids():
+    from pyatrea.parser import parse_supported_modes
+    writable, ids_to_modes, modes_to_ids = parse_supported_modes(load("userctrl.xml"))
+    # modes_to_ids is the inverse of ids_to_modes
+    assert all(modes_to_ids[m] == i for i, m in ids_to_modes.items())
 
 
 def test_supported_modes_from_status_bitmask_parity():
