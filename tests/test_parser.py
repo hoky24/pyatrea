@@ -157,3 +157,10 @@ def test_supported_modes_from_status_returns_none_without_registers():
     from pyatrea.parser import supported_modes_from_status
     from pyatrea.models import AtreaStatus
     assert supported_modes_from_status(AtreaStatus(registers={})) is None
+
+
+def test_translate_resolves_and_unquotes():
+    from pyatrea.parser import translate
+    t = {"params": {"P1": {"t": "Hello%20World"}}, "words": {}}
+    assert translate(t, "P1") == "Hello World"
+    assert translate(t, "missing") == "missing"

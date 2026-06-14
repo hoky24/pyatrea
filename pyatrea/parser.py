@@ -1,4 +1,5 @@
 from __future__ import annotations
+import urllib.parse
 from xml.etree import ElementTree as ET
 import demjson3  # type: ignore[import-untyped]
 from .const import AtreaMode
@@ -109,6 +110,25 @@ def parse_translations(content: bytes) -> dict[str, dict]:
         for word in node.findall("words"):
             result["words"].update(demjson3.decode(word.text))
     return result
+
+
+def translate(translations: dict[str, dict], id: str) -> str:
+    if id in translations["params"]:
+        section = "params"
+    elif id in translations["words"]:
+        section = "words"
+    else:
+        return id
+    entry = translations[section][id]
+    if isinstance(entry, dict) and "d" in entry:
+        text = entry["d"]
+        if text == "not%20to%20be%20translated":
+            text = entry["t"]
+    elif isinstance(entry, dict) and "t" in entry:
+        text = entry["t"]
+    else:
+        text = entry if isinstance(entry, str) else id
+    return urllib.parse.unquote(text)
 
 
 _FORCED_TITLE_TO_MODE = {
