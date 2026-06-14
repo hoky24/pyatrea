@@ -219,6 +219,17 @@ class AtreaClient:
             await self._request(url)
         return True
 
+    async def _frontend_version(self) -> str | None:
+        try:
+            text = await self._get("ver.txt")
+        except AtreaConnectionError:
+            return None
+        try:
+            int(text[0:2], 16)
+        except (ValueError, IndexError):
+            return None
+        return text
+
     async def is_atrea_unit(self) -> bool:
         try:
             text = await self._get("config/login.cgi?magic=")
@@ -228,6 +239,8 @@ class AtreaClient:
             root = ET.fromstring(text)
         except ET.ParseError:
             return False
-        return root.text == "denied" or (
-            root.text is None and "HTTP: 404 Page (/config/login.cgi)" in text
-        )
+        if root.text == "denied":
+            return True
+        if root.text is None and "HTTP: 404 Page (/config/login.cgi)" in text:
+            return await self._frontend_version() is not None
+        return False

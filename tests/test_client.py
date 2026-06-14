@@ -116,6 +116,24 @@ async def test_commit_empty_builder_is_noop(client):
     assert await client.commit(builder) is False
 
 
+async def test_is_atrea_unit_denied_returns_true(client):
+    with aioresponses() as m:
+        m.get(re.compile(r".*login\.cgi.*"), status=200, body=b"<a>denied</a>")
+        assert await client.is_atrea_unit() is True
+
+
+async def test_is_atrea_unit_non_atrea_404_without_ver_returns_false(client):
+    with aioresponses() as m:
+        m.get(
+            re.compile(r".*login\.cgi.*"),
+            status=200,
+            body=b"<html><body>HTTP: 404 Page (/config/login.cgi)</body></html>",
+        )
+        # ver.txt probe is not valid hex -> 404 branch must NOT qualify as Atrea
+        m.get(re.compile(r".*ver\.txt.*"), status=200, body=b"not-hex")
+        assert await client.is_atrea_unit() is False
+
+
 def test_public_exports():
     import pyatrea
     for name in ("AtreaClient", "AtreaMode", "AtreaProgram", "AtreaParams",
