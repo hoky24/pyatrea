@@ -535,7 +535,17 @@ class Atrea:
             for register in self.commands:
                 url = url + "&" + register + self.commands[register]
             response = requests.get(url)
-            return response.status_code == 200
+            success = response.status_code == 200
+            if success:
+                # Invalidate caches after successful HTTP write so subsequent
+                # reads (getStatus, getProgram, getMode, ...) fetch fresh data
+                # from the unit. Without this, sequential service calls (e.g.,
+                # set_hvac_mode → set_preset_mode → set_fan_mode) operate on
+                # stale cached state and may incorrectly auto-switch the unit
+                # to TEMPORARY when the orchestrator just set MANUAL.
+                self.commands = {}  # Clear queue (prevents register carry-over)
+                self.status = {}    # Force fresh status fetch on next read
+            return success
         return False
 
     def setTemperature(self, temperature):
