@@ -105,3 +105,104 @@ class AtreaClient:
             value = status.value("H01000")
             return ids_to_modes.get(int(value)) if value is not None else None
         return None
+
+    @staticmethod
+    def version_of(status: AtreaStatus) -> str | None:
+        r = status.registers
+        if not {"I00020", "I00021", "I00022"} <= r.keys():
+            return None
+        if int(r["I00022"]) > 0:
+            return f'{r["I00020"]}.{r["I00021"]}.{r["I00022"]}'
+        return f'{r["I00020"]}.{r["I00021"]}'
+
+    @staticmethod
+    def latest_version_of(status: AtreaStatus) -> str:
+        r = status.registers
+        if "I10009" in r and int(r["I10009"]) > 0:
+            return f'{r["I10007"]}.{r["I10008"]}.{r["I10009"]}'
+        if "I10007" in r and "I10008" in r:
+            return f'{r["I10007"]}.{r["I10008"]}'
+        return "0.0"
+
+    @staticmethod
+    def id_of(status: AtreaStatus) -> str | None:
+        chars = []
+        for i in range(300, 310):
+            key = f"H12{i}"
+            if key not in status.registers:
+                return None
+            chars.append(chr(int(status.registers[key])))
+        return "".join(chars)
+
+    @staticmethod
+    def forced_mode_of(status: AtreaStatus,
+                       supported: dict[int, AtreaMode]) -> AtreaMode:
+        if "H10712" in status.registers:
+            value = status.value("H10712")
+            if value is not None and int(value) in supported:
+                return supported[int(value)]
+        return AtreaMode.OFF
+
+    def model_of(
+        self, status: AtreaStatus, config_dir: ET.Element | None
+    ) -> dict[str, str] | None:
+        r = status.registers
+        if config_dir is None or "H10520" not in r:
+            return None
+        data = {"main": "", "category": "", "model": ""}
+        main = parser.find_child(config_dir, r["H10520"])
+        if main is None:
+            return None
+        data["main"] = main.attrib.get("name", "")
+        if "H10521" in r:
+            cat = parser.find_child(main, r["H10521"])
+            if cat is not None:
+                data["category"] = cat.attrib.get("name", "")
+                if "H10522" in r:
+                    mdl = parser.find_child(cat, r["H10522"])
+                    if mdl is not None:
+                        data["model"] = mdl.attrib.get("name", "")
+        return data
+
+    async def fetch_config_dir(self) -> ET.Element | None:
+        async with self._lock:
+            text = await self._get("cfgdir.xml")
+        return parser.parse_config_dir(text.encode())
+
+    async def fetch_user_labels(self) -> dict[str, str]:
+        async with self._lock:
+            text = await self._get("config/texts.xml")
+        return parser.parse_user_labels(text.encode())
+
+    async def fetch_translations(self) -> dict[str, dict]:
+        async with self._lock:
+            text = await self._get("lang/texts_2.xml")
+        return parser.parse_translations(text.encode())
+
+    async def fetch_supported(
+        self, status: AtreaStatus
+    ) -> tuple[dict[AtreaMode, bool], dict[int, AtreaMode], dict[int, AtreaMode]]:
+        """Return (writable_modes, ids_to_modes, forced_modes). Supported modes
+        come from the I12004 bitmask when present (RD5), else from the userctrl
+        ModeEC op (other firmware)."""
+        async with self._lock:
+            text = await self._get("lang/userCtrl.xml")
+        raw = text.encode()
+        ec_writable, ids_to_modes = parser.parse_supported_modes(raw)
+        bitmask_writable = parser.supported_modes_from_status(status)
+        writable = bitmask_writable if bitmask_writable is not None else ec_writable
+        forced = parser.parse_supported_forced_modes(raw)
+        return writable, ids_to_modes, forced
+
+    async def is_atrea_unit(self) -> bool:
+        try:
+            text = await self._get("config/login.cgi?magic=")
+        except AtreaConnectionError:
+            return False
+        try:
+            root = ET.fromstring(text)
+        except ET.ParseError:
+            return False
+        return root.text == "denied" or (
+            root.text is None and "HTTP: 404 Page (/config/login.cgi)" in text
+        )

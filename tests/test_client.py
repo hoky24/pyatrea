@@ -73,3 +73,17 @@ def test_mode_of_guards_bad_value():
     assert AtreaClient.mode_of(AtreaStatus(registers={"H10705": "2"})) == AtreaMode.VENTILATION
     assert AtreaClient.mode_of(AtreaStatus(registers={"H10705": "999"})) is None
     assert AtreaClient.mode_of(AtreaStatus(registers={})) is None
+
+
+def test_version_of_partial_status_returns_none():
+    assert AtreaClient.version_of(AtreaStatus(registers={})) is None
+    s = AtreaStatus(registers={"I00020": "2", "I00021": "01", "I00022": "32"})
+    assert AtreaClient.version_of(s) == "2.01.32"
+
+
+def test_forced_mode_of_defaults_off():
+    assert AtreaClient.forced_mode_of(AtreaStatus(registers={}), {}) == AtreaMode.OFF
+
+
+def test_id_of_returns_none_when_incomplete():
+    assert AtreaClient.id_of(AtreaStatus(registers={})) is None
