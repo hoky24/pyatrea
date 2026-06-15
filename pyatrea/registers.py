@@ -81,6 +81,10 @@ REGISTERS: dict[str, RegisterDef] = {
     "D10202": _r("discrete", role="sensor"),
     "D10203": _r("discrete", role="sensor"),
     "I10005": _r("input", role="info"),
+    # fan drive M1/M2 (0–10 V) read by sensor.py; derive.fan_drive divides the
+    # raw value by 100 itself, so these carry NO coef (raw passes through).
+    "H10200": _r("holding", role="sensor"),
+    "H10201": _r("holding", role="sensor"),
     # v3-A entities: season switch + temperature, night precooling enable.
     # The defrost discretes these entities read (D11117 heat-exchanger frost,
     # D11118 heat-exchanger defrosting, D11149 HP defrosting) are already

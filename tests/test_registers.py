@@ -45,7 +45,8 @@ def test_entity_read_registers_present():
 
 
 def test_v3a_entity_registers_present():
-    for rid in ("H11401", "H11402", "C10902", "D11117", "D11118", "D11149"):
+    for rid in ("H11401", "H11402", "C10902", "D11117", "D11118", "D11149",
+                "H10200", "H10201"):
         assert rid in REGISTERS
 
 
