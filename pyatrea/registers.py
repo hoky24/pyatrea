@@ -92,6 +92,7 @@ REGISTERS: dict[str, RegisterDef] = {
     "H11401": _r("holding", role="control"),            # season switch
     "H11402": _r("holding", coef=10, role="control"),   # season-switch temperature ×10
     "C10902": _r("coil", role="control"),               # night precooling enable
+    "H11022": _r("holding", role="sensor"),             # gates C10902 editability (0 = editable)
 }
 
 # Warning flags (flag="W" in params.xml) — all discrete.
