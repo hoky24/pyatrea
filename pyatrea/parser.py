@@ -1,7 +1,7 @@
 from __future__ import annotations
 import urllib.parse
 from xml.etree import ElementTree as ET
-import demjson3  # type: ignore[import-untyped]
+import demjson3
 from .const import AtreaMode
 from .exceptions import AtreaResponseError
 from .models import AtreaParams, AtreaStatus
@@ -96,8 +96,8 @@ def parse_user_labels(content: bytes) -> dict[str, str]:
     return labels
 
 
-def parse_translations(content: bytes) -> dict[str, dict]:
-    result: dict[str, dict] = {"params": {}, "words": {}}
+def parse_translations(content: bytes) -> dict[str, dict[str, object]]:
+    result: dict[str, dict[str, object]] = {"params": {}, "words": {}}
     try:
         xmldoc = ET.fromstring(content)
     except ET.ParseError as err:
@@ -112,7 +112,7 @@ def parse_translations(content: bytes) -> dict[str, dict]:
     return result
 
 
-def translate(translations: dict[str, dict], id: str) -> str:
+def translate(translations: dict[str, dict[str, object]], id: str) -> str:
     if id in translations["params"]:
         section = "params"
     elif id in translations["words"]:

@@ -178,7 +178,7 @@ class AtreaClient:
             text = await self._get("config/texts.xml")
         return parser.parse_user_labels(text.encode())
 
-    async def fetch_translations(self) -> dict[str, dict]:
+    async def fetch_translations(self) -> dict[str, dict[str, object]]:
         async with self._lock:
             text = await self._get("lang/texts_2.xml")
         return parser.parse_translations(text.encode())
