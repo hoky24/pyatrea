@@ -44,6 +44,22 @@ def _normalize_url_keep_blank(url):  # type: ignore[no-untyped-def]
 
 _ar_core.normalize_url = _normalize_url_keep_blank  # type: ignore[attr-defined]
 
+# Compatibility shim: aioresponses 0.7.8 builds the mocked response body via
+# StreamReader(limit=2**16).feed_data(body). When body exceeds the 128 KiB
+# high-water mark (cfgdir.xml is ~720 KiB, texts_2.xml ~165 KiB), the stream
+# calls protocol.pause_reading(), which asserts on a real parser the synthetic
+# response never has, and crashes. Replace the factory with one whose limit is
+# large enough to hold any fixture, so pause_reading is never triggered.
+from aiohttp import StreamReader as _StreamReader  # noqa: E402
+from aiohttp.client_proto import ResponseHandler as _ResponseHandler  # noqa: E402
+
+
+def _large_stream_reader_factory(loop=None):  # type: ignore[no-untyped-def]
+    return _StreamReader(_ResponseHandler(loop=loop), limit=2 ** 24, loop=loop)
+
+
+_ar_core.stream_reader_factory = _large_stream_reader_factory  # type: ignore[attr-defined]
+
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
 
 
