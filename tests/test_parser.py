@@ -65,12 +65,14 @@ def test_params_parser_parity():
     assert new.offsets == legacy["offsets"]
 
 
-def test_value_applies_offset_then_coef():
+def test_value_scales_from_registers():
+    # I10215 is a temperature register with coef=10 in registers.py; scaling is
+    # authoritative there, not from the (legacy) AtreaParams coefs/offsets.
     status = AtreaStatus(
-        registers={"X": "100"},
-        params=AtreaParams(offsets={"X": 10.0}, coefs={"X": 2.0}),
+        registers={"I10215": "200"},
+        params=AtreaParams(offsets={"I10215": 999.0}, coefs={"I10215": 999.0}),
     )
-    assert status.value("X") == 45.0
+    assert status.value("I10215") == 20.0
 
 
 def test_value_missing_key_returns_none():

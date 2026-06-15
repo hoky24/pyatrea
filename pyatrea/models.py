@@ -1,6 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 
+from .registers import REGISTERS
+
 
 @dataclass(slots=True)
 class AtreaParams:
@@ -20,8 +22,9 @@ class AtreaStatus:
         if key not in self.registers:
             return None
         value: int | float = int(self.registers[key])
-        if key in self.params.offsets:
-            value -= self.params.offsets[key]
-        if key in self.params.coefs:
-            value /= self.params.coefs[key]
+        d = REGISTERS.get(key)
+        if d is not None:
+            value = value - d.offset
+            if d.coef:
+                value = value / d.coef
         return value

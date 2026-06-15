@@ -1,16 +1,17 @@
 from pyatrea.commands import CommandBuilder
 from pyatrea.const import AtreaProgram
-from pyatrea.models import AtreaParams
 
 
-def builder(ids=("H10708", "H01020", "H10700", "H10709", "H10710")):
-    return CommandBuilder(params=AtreaParams(ids=list(ids)), known_registers=set(ids))
+def builder() -> CommandBuilder:
+    return CommandBuilder()
 
 
-def test_set_power_within_range():
+def test_set_power_writes_idw():
     b = builder()
     assert b.set_power(50) is True
-    assert b.commands["H10708"] == "00050"
+    # H10704 control -> write_id H10714; H01020 has no write_id -> itself
+    assert b.commands["H10714"] == "00050"
+    assert "H10704" not in b.commands
     assert b.commands["H01020"] == "00050"
 
 
@@ -22,16 +23,14 @@ def test_set_power_rejects_out_of_range():
 
 
 def test_set_program_manual_payload():
-    b = builder(ids=("H10700", "H10701", "H10702", "H10703",
-                     "H01015", "H01016", "H01017"))
+    b = builder()
     assert b.set_program(AtreaProgram.MANUAL) is True
     assert b.commands["H10700"] == "00000"
     assert b.commands["H01015"] == "00001"
 
 
 def test_set_program_temporary_pops_h10703():
-    b = builder(ids=("H10700", "H10701", "H10702", "H10703",
-                     "H01015", "H01016", "H01017"))
+    b = builder()
     b.set_program(AtreaProgram.WEEKLY)
     b.set_program(AtreaProgram.TEMPORARY)
     assert "H10703" not in b.commands
@@ -39,7 +38,8 @@ def test_set_program_temporary_pops_h10703():
 
 
 def test_set_temperature_scales_and_validates():
-    b = builder(ids=("H10710", "H01021"))
+    b = builder()
     assert b.set_temperature(22) is True
-    assert b.commands["H10710"] == "00220"
+    # H10706 control coef=10 -> write_id H10716, value 22 -> 220
+    assert b.commands["H10716"] == "00220"
     assert b.set_temperature(5) is False

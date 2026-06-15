@@ -1,89 +1,71 @@
 from __future__ import annotations
 
-import asyncio
-import hashlib
-import random
-import string
 from xml.etree import ElementTree as ET
-
-import aiohttp
 
 from . import parser
 from .commands import CommandBuilder
-from .const import REQUEST_TIMEOUT, AtreaMode, AtreaProgram
-from .exceptions import AtreaAuthError, AtreaConnectionError, AtreaResponseError
-from .models import AtreaParams, AtreaStatus
+from .const import AtreaMode, AtreaProgram
+from .models import AtreaStatus
+from .transport import AtreaTransport, Descriptors
 
 
 class AtreaClient:
-    def __init__(
-        self,
-        ip: str,
-        port: int = 80,
-        password: str = "",
-        session: aiohttp.ClientSession | None = None,
-    ) -> None:
-        self._ip = ip
-        self._port = port
-        self._password = password
-        self._session = session
-        self._code = ""
-        self._lock = asyncio.Lock()
-        self._timeout = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT)
+    """Transport-agnostic facade over an :class:`AtreaTransport`.
 
-    def _base_url(self) -> str:
-        return f"http://{self._ip}:{self._port}/"
+    All wire I/O (HTTP or Modbus) lives in the transport; this client adds the
+    register-aware status/command semantics and the static status mappers.
+    """
 
-    def _url(self, param: str) -> str:
-        sep = "&" if "?" in param else "?"
-        nonce = random.choice(string.ascii_letters) + random.choice(string.ascii_letters)
-        return f"{self._base_url()}{param}{sep}auth={self._code}&{nonce}"
+    def __init__(self, transport: AtreaTransport) -> None:
+        self._transport = transport
 
-    async def _request(self, url: str) -> str:
-        assert self._session is not None, "AtreaClient needs an aiohttp session"
-        try:
-            async with self._session.get(url, timeout=self._timeout) as resp:
-                if resp.status != 200:
-                    raise AtreaConnectionError(f"HTTP {resp.status} for {url}")
-                return await resp.text()
-        except (aiohttp.ClientError, asyncio.TimeoutError, OSError) as err:
-            raise AtreaConnectionError(str(err)) from err
+    async def fetch_status(self) -> AtreaStatus:
+        return AtreaStatus(registers=await self._transport.read())
 
-    async def _get(self, param: str) -> str:
-        return await self._request(self._url(param))
+    async def fetch_descriptors(self) -> Descriptors:
+        return await self._transport.read_descriptors()
 
-    async def _authenticate(self) -> None:
-        magic = hashlib.md5(("\r\n" + self._password).encode()).hexdigest()
-        text = await self._get(f"config/login.cgi?magic={magic}")
-        try:
-            token = ET.fromstring(text).text
-        except ET.ParseError as err:
-            raise AtreaResponseError("malformed login response") from err
-        if token is None or token == "denied":
-            raise AtreaAuthError("authentication denied")
-        self._code = token
+    @staticmethod
+    def supported_from(
+        status: AtreaStatus, descriptors: Descriptors
+    ) -> tuple[
+        dict[AtreaMode, bool],
+        dict[int, AtreaMode],
+        dict[AtreaMode, int],
+        dict[int, AtreaMode],
+    ]:
+        """Return ``(writable, ids_to_modes, modes_to_ids, forced)``.
 
-    async def _get_status_text(self) -> str:
-        text = await self._get("config/xml.xml")
-        if "HTTP: 403 Forbidden" in text:
-            await self._authenticate()
-            text = await self._get("config/xml.xml")
-            if "HTTP: 403 Forbidden" in text:
-                raise AtreaAuthError("403 after re-auth")
-        return text
+        ``writable`` comes from the per-cycle I12004 bitmask in ``status`` when
+        present (RD5 firmware); otherwise every mode advertised by the
+        descriptors' ModeEC map is treated as writable. id<->mode and forced
+        maps come straight from ``descriptors``.
+        """
+        bitmask = parser.supported_modes_from_status(status)
+        if bitmask is not None:
+            writable = bitmask
+        else:
+            writable = {m: False for m in AtreaMode}
+            for mode in descriptors.modes_to_ids:
+                writable[mode] = True
+        return (
+            writable,
+            descriptors.ids_to_modes,
+            descriptors.modes_to_ids,
+            descriptors.forced_modes,
+        )
 
-    async def fetch_params(self) -> AtreaParams:
-        async with self._lock:
-            text = await self._get("user/params.xml")
-        return parser.parse_params(text.encode())
+    def command_builder(self, **kw: object) -> CommandBuilder:
+        return CommandBuilder(**kw)  # type: ignore[arg-type]
 
-    async def fetch_status(self, with_params: bool = False) -> AtreaStatus:
-        async with self._lock:
-            text = await self._get_status_text()
-        status = parser.parse_status(text.encode())
-        if with_params:
-            status.params = await self.fetch_params()
-        return status
+    async def commit(self, builder: CommandBuilder) -> bool:
+        if not builder.commands:
+            return False
+        await self._transport.write(builder.commands)
+        return True
+
+    async def is_atrea_unit(self) -> bool:
+        return await self._transport.is_atrea_unit()
 
     @staticmethod
     def program_of(status: AtreaStatus) -> AtreaProgram | None:
@@ -167,101 +149,3 @@ class AtreaClient:
                     if mdl is not None:
                         data["model"] = mdl.attrib.get("name", "")
         return data
-
-    async def fetch_config_dir(self) -> ET.Element | None:
-        async with self._lock:
-            text = await self._get("cfgdir.xml")
-        return parser.parse_config_dir(text.encode())
-
-    async def fetch_user_labels(self) -> dict[str, str]:
-        async with self._lock:
-            text = await self._get("config/texts.xml")
-        return parser.parse_user_labels(text.encode())
-
-    async def fetch_translations(self) -> dict[str, dict[str, object]]:
-        async with self._lock:
-            text = await self._get("lang/texts_2.xml")
-        return parser.parse_translations(text.encode())
-
-    async def fetch_supported(
-        self, status: AtreaStatus
-    ) -> tuple[
-        dict[AtreaMode, bool],
-        dict[int, AtreaMode],
-        dict[AtreaMode, int],
-        dict[int, AtreaMode],
-    ]:
-        """Return (writable_modes, ids_to_modes, modes_to_ids, forced_modes).
-        Supported modes come from the I12004 bitmask when present (RD5), else
-        from the userctrl ModeEC op (other firmware). ids_to_modes/modes_to_ids
-        come from the ModeEC parse (empty for bitmask-only RD5 units, which is
-        correct since those use enum-equal ids)."""
-        async with self._lock:
-            text = await self._get("lang/userCtrl.xml")
-        raw = text.encode()
-        ec_writable, ids_to_modes, modes_to_ids = parser.parse_supported_modes(raw)
-        bitmask_writable = parser.supported_modes_from_status(status)
-        writable = bitmask_writable if bitmask_writable is not None else ec_writable
-        forced = parser.parse_supported_forced_modes(raw)
-        return writable, ids_to_modes, modes_to_ids, forced
-
-    async def fetch_userctrl(
-        self,
-    ) -> tuple[
-        dict[AtreaMode, bool],
-        dict[int, AtreaMode],
-        dict[AtreaMode, int],
-        dict[int, AtreaMode],
-    ]:
-        """Static userctrl.xml data (ModeEC writable map, id<->mode maps, forced
-        modes). Firmware-static — fetch once and cache; combine with
-        supported_modes_from_status(status) for the per-cycle bitmask overlay."""
-        async with self._lock:
-            text = await self._get("lang/userCtrl.xml")
-        raw = text.encode()
-        ec_writable, ids_to_modes, modes_to_ids = parser.parse_supported_modes(raw)
-        forced = parser.parse_supported_forced_modes(raw)
-        return ec_writable, ids_to_modes, modes_to_ids, forced
-
-    def command_builder(self, params: AtreaParams, known_registers: set[str],
-                        **kw: object) -> CommandBuilder:
-        return CommandBuilder(params=params, known_registers=known_registers, **kw)  # type: ignore[arg-type]
-
-    async def commit(self, builder: CommandBuilder) -> bool:
-        if not builder.commands:
-            return False
-        suffix = "".join(f"&{r}{v}" for r, v in builder.commands.items())
-        async with self._lock:
-            text = await self._request(self._url("config/xml.cgi") + suffix)
-            if "HTTP: 403 Forbidden" in text:
-                await self._authenticate()
-                text = await self._request(self._url("config/xml.cgi") + suffix)
-                if "HTTP: 403 Forbidden" in text:
-                    raise AtreaAuthError("403 after re-auth on commit")
-        return True
-
-    async def _frontend_version(self) -> str | None:
-        try:
-            text = await self._get("ver.txt")
-        except AtreaConnectionError:
-            return None
-        try:
-            int(text[0:2], 16)
-        except (ValueError, IndexError):
-            return None
-        return text
-
-    async def is_atrea_unit(self) -> bool:
-        try:
-            text = await self._get("config/login.cgi?magic=")
-        except AtreaConnectionError:
-            return False
-        try:
-            root = ET.fromstring(text)
-        except ET.ParseError:
-            return False
-        if root.text == "denied":
-            return True
-        if root.text is None and "HTTP: 404 Page (/config/login.cgi)" in text:
-            return await self._frontend_version() is not None
-        return False
