@@ -12,3 +12,7 @@ class AtreaAuthError(AtreaError):
 
 class AtreaResponseError(AtreaError):
     """The unit returned a 200 with malformed or unexpected content."""
+
+
+class AtreaModbusError(AtreaConnectionError):
+    """Modbus transport failure."""
