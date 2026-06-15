@@ -17,6 +17,13 @@ _READERS = {
 }
 
 
+def _is_kwarg_mismatch(err: TypeError) -> bool:
+    """True if a TypeError is from the slave/device_id kwarg signature, not
+    from inside the pymodbus call body (which must propagate, not be masked)."""
+    msg = str(err)
+    return "slave" in msg or "device_id" in msg or "unexpected keyword" in msg
+
+
 class ModbusTransport:
     def __init__(
         self,
@@ -59,8 +66,10 @@ class ModbusTransport:
         for kwargs in self._slave_kwargs():
             try:
                 rr = await fn(address, count=count, **kwargs)
-            except TypeError:
-                continue
+            except TypeError as err:
+                if _is_kwarg_mismatch(err):
+                    continue
+                raise AtreaModbusError(str(err)) from err
             except Exception as err:  # noqa: BLE001
                 raise AtreaModbusError(str(err)) from err
             if rr is None or rr.isError():
@@ -118,8 +127,10 @@ class ModbusTransport:
             try:
                 await client.write_register(addr, value, **kwargs)
                 return
-            except TypeError:
-                continue
+            except TypeError as err:
+                if _is_kwarg_mismatch(err):
+                    continue
+                raise AtreaModbusError(str(err)) from err
         raise AtreaModbusError("no compatible write_register signature")
 
     async def _write_coil(
@@ -129,8 +140,10 @@ class ModbusTransport:
             try:
                 await client.write_coil(addr, value, **kwargs)
                 return
-            except TypeError:
-                continue
+            except TypeError as err:
+                if _is_kwarg_mismatch(err):
+                    continue
+                raise AtreaModbusError(str(err)) from err
         raise AtreaModbusError("no compatible write_coil signature")
 
     async def read_descriptors(self) -> Descriptors:
