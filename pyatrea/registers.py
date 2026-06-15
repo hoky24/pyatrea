@@ -81,6 +81,13 @@ REGISTERS: dict[str, RegisterDef] = {
     "D10202": _r("discrete", role="sensor"),
     "D10203": _r("discrete", role="sensor"),
     "I10005": _r("input", role="info"),
+    # v3-A entities: season switch + temperature, night precooling enable.
+    # The defrost discretes these entities read (D11117 heat-exchanger frost,
+    # D11118 heat-exchanger defrosting, D11149 HP defrosting) are already
+    # present below in _WARNINGS with role="warning"; do NOT re-add them here.
+    "H11401": _r("holding", role="control"),            # season switch
+    "H11402": _r("holding", coef=10, role="control"),   # season-switch temperature ×10
+    "C10902": _r("coil", role="control"),               # night precooling enable
 }
 
 # Warning flags (flag="W" in params.xml) — all discrete.

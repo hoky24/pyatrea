@@ -44,6 +44,18 @@ def test_entity_read_registers_present():
         assert rid in REGISTERS
 
 
+def test_v3a_entity_registers_present():
+    for rid in ("H11401", "H11402", "C10902", "D11117", "D11118", "D11149"):
+        assert rid in REGISTERS
+
+
+def test_v3a_defrost_discretes_keep_warning_role():
+    # D11117/D11118/D11149 were already swept into _WARNINGS from params.xml;
+    # the v3-A entities read them as sensors but the registers stay role=warning.
+    for rid in ("D11117", "D11118", "D11149"):
+        assert REGISTERS[rid].role == "warning"
+
+
 def test_modbus_ranges_groups_contiguous():
     ranges = modbus_ranges()
     assert all(len(r) == 3 and r[0] in ("input", "holding", "coil", "discrete") for r in ranges)
