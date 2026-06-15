@@ -53,6 +53,22 @@ async def test_write_holding_and_coil(monkeypatch):
     client.write_coil.assert_awaited()
 
 
+async def test_write_routes_coil_and_holding_by_prefix(monkeypatch):
+    # The integration writes a coil (C10902) and a holding register (H11401)
+    # via CommandBuilder.commands. The transport must route the C-prefix as a
+    # coil (FC5/FC15) and the H-prefix as a holding register (FC6/FC16) — NOT
+    # both as holding.
+    t = ModbusTransport("1.2.3.4", 502, 1, pace=0)
+    client = _fake_client({})
+    t._client = client
+    t._connected = True
+    await t.write({"C10902": "00001", "H11401": "00000"})
+    client.write_coil.assert_awaited_once()
+    assert client.write_coil.await_args.args[0] == 10902
+    client.write_register.assert_awaited_once()
+    assert client.write_register.await_args.args[0] == 11401
+
+
 async def test_read_descriptors_empty():
     t = ModbusTransport("1.2.3.4", 502, 1, pace=0)
     d = await t.read_descriptors()
