@@ -30,13 +30,14 @@ async def test_fetch_descriptors_delegates_to_transport():
     t.read_descriptors.assert_awaited_once()
 
 
-async def test_commit_writes_idw():
+async def test_commit_writes_proven_register():
     t = fake_transport({})
     c = AtreaClient(t)
     b = c.command_builder()
     b.set_power(40)
     assert await c.commit(b) is True
-    assert "H10714" in t.write.await_args.args[0]
+    assert "H10708" in t.write.await_args.args[0]
+    assert "H10714" not in t.write.await_args.args[0]
 
 
 async def test_commit_empty_builder_is_noop():

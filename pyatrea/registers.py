@@ -20,7 +20,6 @@ class RegisterDef:
     coef: float = 1.0
     offset: float = 0.0
     role: Role = "sensor"
-    write_id: str | None = None  # idw — register to WRITE for a control
 
 
 def _r(
@@ -28,20 +27,22 @@ def _r(
     coef: float = 1.0,
     offset: float = 0.0,
     role: Role = "sensor",
-    write_id: str | None = None,
 ) -> RegisterDef:
-    return RegisterDef(kind, coef, offset, role, write_id)
+    return RegisterDef(kind, coef, offset, role)
 
 
 REGISTERS: dict[str, RegisterDef] = {
-    # controls (read id -> write_id idw)
-    "H10704": _r("holding", role="control", write_id="H10714"),
-    "H10705": _r("holding", role="control", write_id="H10715"),
-    "H10706": _r("holding", coef=10, role="control", write_id="H10716"),
-    "H10707": _r("holding", role="control", write_id="H10717"),
+    # controls — READ-side state only. Writes go to proven hardware write
+    # registers (H10708/H10709/H10710 + H010xx twins) via CommandBuilder, NOT
+    # to these ids; see pyatrea/commands.py.
+    "H10704": _r("holding", role="control"),
+    "H10705": _r("holding", role="control"),
+    "H10706": _r("holding", coef=10, role="control"),
+    "H10707": _r("holding", role="control"),
     "H10700": _r("holding", role="control"),
     "H10712": _r("holding", role="control"),
-    # write-target registers (info role; they ARE the write_id targets)
+    # requested-value readback registers (info role; e.g. _requested_power
+    # is read from H10714 by the climate entity).
     "H10714": _r("holding", role="info"),
     "H10715": _r("holding", role="info"),
     "H10716": _r("holding", coef=10, role="info"),

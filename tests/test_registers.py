@@ -7,9 +7,6 @@ def test_register_defs_well_formed():
         assert rid[0] in "IHCD"
         assert d.kind in ("input", "holding", "coil", "discrete")
         assert d.coef > 0
-        if d.write_id is not None:
-            assert d.role == "control"
-            assert d.write_id in REGISTERS
 
 
 def test_known_registers_present():
@@ -22,10 +19,12 @@ def test_known_registers_present():
         assert rid in REGISTERS
 
 
-def test_idw_controls_map_to_write_id():
-    assert REGISTERS["H10704"].write_id == "H10714"
-    assert REGISTERS["H10705"].write_id == "H10715"
-    assert REGISTERS["H10706"].write_id == "H10716"
+def test_control_registers_are_read_side_metadata():
+    # controls describe READ-side state; writes go to proven write targets
+    # (H10708/H10709/H10710) handled by CommandBuilder, not via write_id.
+    assert REGISTERS["H10704"].role == "control"
+    assert REGISTERS["H10705"].role == "control"
+    assert REGISTERS["H10706"].role == "control"
     assert REGISTERS["H10706"].coef == 10  # temp ×10
 
 
