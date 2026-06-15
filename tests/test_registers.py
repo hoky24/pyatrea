@@ -39,6 +39,11 @@ def test_temperatures_have_coef_10():
         assert REGISTERS[rid].coef == 10
 
 
+def test_entity_read_registers_present():
+    for rid in ("C10215", "C10216", "D10200", "D10201", "D10202", "D10203", "I10005"):
+        assert rid in REGISTERS
+
+
 def test_modbus_ranges_groups_contiguous():
     ranges = modbus_ranges()
     assert all(len(r) == 3 and r[0] in ("input", "holding", "coil", "discrete") for r in ranges)

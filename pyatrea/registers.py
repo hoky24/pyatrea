@@ -71,6 +71,16 @@ REGISTERS: dict[str, RegisterDef] = {
     "H13503": _r("holding"),
     "I12004": _r("input", role="info"),
     "H11700": _r("holding", role="info"),
+    # entity-read registers: climate heating/cooling status, active inputs,
+    # firmware-update in-progress. The entities read these over HTTP, so the
+    # Modbus transport must poll them too.
+    "C10215": _r("coil", role="sensor"),
+    "C10216": _r("coil", role="sensor"),
+    "D10200": _r("discrete", role="sensor"),
+    "D10201": _r("discrete", role="sensor"),
+    "D10202": _r("discrete", role="sensor"),
+    "D10203": _r("discrete", role="sensor"),
+    "I10005": _r("input", role="info"),
 }
 
 # Warning flags (flag="W" in params.xml) — all discrete.
